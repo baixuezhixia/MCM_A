@@ -5,7 +5,6 @@ A continuous-time mathematical model for smartphone battery state of charge (SOC
 
 import numpy as np
 from scipy.integrate import solve_ivp
-from scipy.optimize import minimize
 import matplotlib.pyplot as plt
 from dataclasses import dataclass
 from typing import Callable, Dict, List, Tuple, Optional
