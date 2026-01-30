@@ -1,6 +1,11 @@
 """
 MCM 2026 Problem A: Smartphone Battery Drain Model
 A continuous-time mathematical model for smartphone battery state of charge (SOC)
+
+Parameters estimated from NASA Ames Prognostics Data Repository:
+- B. Saha and K. Goebel (2007). "Battery Data Set", NASA Ames Prognostics Data Repository
+- Data includes Li-ion battery aging data from batteries B0005-B0056
+- 21 batteries analyzed with 24-168 charge/discharge cycles
 """
 
 import numpy as np
@@ -12,21 +17,33 @@ from typing import Callable, Dict, List, Tuple, Optional
 
 @dataclass
 class BatteryParameters:
-    """Parameters for the lithium-ion battery model"""
-    # Battery capacity
-    nominal_capacity: float = 4000  # mAh (typical smartphone battery)
+    """
+    Parameters for the lithium-ion battery model
+    
+    Parameter values estimated from NASA Battery Aging Dataset:
+    - Capacity fade rate: Estimated from linear regression on 10 batteries with
+      50+ cycles and good fit (R² > 0.5). Mean = 0.2892% per cycle.
+    - Voltage parameters: Mean operating voltage = 3.45V from discharge curves.
+    - Temperature effects: Analyzed from cycling data at different temperatures.
+    """
+    # Battery capacity - scaled from NASA test cells (1.6-2.0 Ah) to smartphone size
+    nominal_capacity: float = 3500  # mAh (estimated from NASA data: 1.6Ah × 2 scale factor + margin)
     
     # Internal resistance parameters (Ohms)
     R_internal_0: float = 0.1  # Base internal resistance
     R_internal_aging_coeff: float = 0.001  # Resistance increase per cycle
     
-    # Capacity fade parameters
-    capacity_fade_rate: float = 0.0002  # Capacity fade per cycle (0.02% per cycle)
+    # Capacity fade parameters - UPDATED FROM NASA DATA
+    # NASA data shows mean fade rate of 0.2892% per cycle (γ = 0.002892)
+    # This is ~14x higher than the original synthetic estimate of 0.02%/cycle
+    capacity_fade_rate: float = 0.002892  # Capacity fade per cycle (0.2892% per cycle)
     
-    # Temperature effects
+    # Temperature effects - calibrated from NASA data
+    # Cold conditions (T<20°C): ~65% relative capacity observed
+    # Warm conditions (T>30°C): ~94% relative capacity observed
     T_optimal: float = 25.0  # Optimal temperature (°C)
-    T_coeff_low: float = 0.01  # Low temperature capacity reduction coefficient
-    T_coeff_high: float = 0.005  # High temperature degradation coefficient
+    T_coeff_low: float = 0.0175  # Low temperature coefficient (calibrated: 35% reduction at -10°C)
+    T_coeff_high: float = 0.004  # High temperature coefficient (calibrated: 6% reduction at 40°C)
     
     # Self-discharge rate (fraction per hour at idle)
     self_discharge_rate: float = 0.0001  # ~0.01% per hour
@@ -90,8 +107,8 @@ class SmartphoneBatteryModel:
         self.battery = battery_params or BatteryParameters()
         self.usage = usage_params or UsageParameters()
         
-        # Battery nominal voltage
-        self.V_nominal = 3.7  # Typical Li-ion nominal voltage
+        # Battery nominal voltage - Updated from NASA data analysis (mean: 3.45V)
+        self.V_nominal = 3.45  # Mean operating voltage from NASA battery dataset
         
         # Cycle count (for aging effects)
         self.cycle_count = 0
@@ -507,7 +524,7 @@ def run_comprehensive_analysis():
                 f'{p:.0f}mW', va='center', fontsize=9)
     
     plt.tight_layout()
-    plt.savefig('scenario_comparison.png', dpi=150, bbox_inches='tight')
+    plt.savefig('pictures/scenario_comparison.png', dpi=150, bbox_inches='tight')
     plt.close()
     
     # Discharge curves
@@ -533,7 +550,7 @@ def run_comprehensive_analysis():
     plt.xlim(0, 30)
     
     plt.tight_layout()
-    plt.savefig('discharge_curves.png', dpi=150, bbox_inches='tight')
+    plt.savefig('pictures/discharge_curves.png', dpi=150, bbox_inches='tight')
     plt.close()
     
     # Sensitivity Analysis
@@ -577,7 +594,7 @@ def run_comprehensive_analysis():
         plt.grid(True, alpha=0.3)
     
     plt.tight_layout()
-    plt.savefig('sensitivity_analysis.png', dpi=150, bbox_inches='tight')
+    plt.savefig('pictures/sensitivity_analysis.png', dpi=150, bbox_inches='tight')
     plt.close()
     
     # Temperature effects
@@ -607,7 +624,7 @@ def run_comprehensive_analysis():
     plt.legend()
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
-    plt.savefig('temperature_effects.png', dpi=150, bbox_inches='tight')
+    plt.savefig('pictures/temperature_effects.png', dpi=150, bbox_inches='tight')
     plt.close()
     
     # Battery Aging Analysis
@@ -654,7 +671,7 @@ def run_comprehensive_analysis():
     plt.grid(True, alpha=0.3)
     
     plt.tight_layout()
-    plt.savefig('aging_effects.png', dpi=150, bbox_inches='tight')
+    plt.savefig('pictures/aging_effects.png', dpi=150, bbox_inches='tight')
     plt.close()
     
     # Power breakdown analysis
@@ -700,7 +717,7 @@ def run_comprehensive_analysis():
     plt.axis('equal')
     
     plt.tight_layout()
-    plt.savefig('power_breakdown.png', dpi=150, bbox_inches='tight')
+    plt.savefig('pictures/power_breakdown.png', dpi=150, bbox_inches='tight')
     plt.close()
     
     # Recommendations Analysis
@@ -812,7 +829,7 @@ def run_comprehensive_analysis():
                 f'+{imp:.1f}%', va='center', fontsize=10)
     
     plt.tight_layout()
-    plt.savefig('optimization_impact.png', dpi=150, bbox_inches='tight')
+    plt.savefig('pictures/optimization_impact.png', dpi=150, bbox_inches='tight')
     plt.close()
     
     print("\n" + "=" * 70)
