@@ -1,6 +1,7 @@
+# -*- coding: utf-8 -*-
 """
 MCM 2026 Problem A: Smartphone Battery SOC Continuous-Time Model
-基于物理推理的智能手机电池SOC连续时间建模
+(Smartphone Battery State of Charge Continuous-Time Modeling)
 
 This model follows the exact mathematical formulation specified:
 - Core equation: dSOC(t)/dt = -P_total(t)/C
@@ -14,8 +15,7 @@ References for real data:
 [3] Zhang, L., et al. (2010). "Accurate Online Power Estimation and Automatic Battery Behavior
     Based Power Model Generation for Smartphones" CODES+ISSS
 [4] Saha, B. and Goebel, K. (2007). "Battery Data Set" NASA Ames Prognostics Data Repository
-[5] Apple Inc. Battery specifications and degradation curves
-[6] Samsung Battery Technology Reports
+[5] Apple Inc. and Samsung Battery specifications and degradation curves (2022-2023)
 """
 
 import numpy as np
@@ -97,10 +97,10 @@ REAL_POWER_DATA_ZHANG = {
     }
 }
 
-# Modern smartphone typical specifications (2024 data)
+# Modern smartphone typical specifications (2022-2023 data)
 MODERN_SMARTPHONE_SPECS = {
-    "source": "Aggregated from Apple/Samsung specifications 2023-2024",
-    "typical_battery_mAh": 4500,  # iPhone 15 Pro Max: 4441, Samsung S24 Ultra: 5000
+    "source": "Aggregated from Apple/Samsung specifications 2022-2023",
+    "typical_battery_mAh": 4500,  # iPhone 14 Pro Max: 4323, Samsung S23 Ultra: 5000
     "nominal_voltage_V": 3.85,
     "screen_area_mm2": 10000,     # ~6.7" display
     "measurements": {
