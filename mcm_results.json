@@ -1,0 +1,348 @@
+{
+  "model_parameters": {
+    "battery": {
+      "nominal_capacity_mAh": 4500,
+      "scale_factor": 1.618705035971223,
+      "ocv_c0": 3.348702527950995,
+      "ocv_c1": 2.4406927638006404,
+      "ocv_c2": -9.555064783058578,
+      "ocv_c3": 20.921922901008205,
+      "ocv_c4": -20.325184501415578,
+      "ocv_c5": 7.381044900802154,
+      "soh_new": 1.0,
+      "soh_eol": 0.633,
+      "shutdown_soc": 0.05,
+      "max_discharge_power_w": 15.0,
+      "V_max": 4.2,
+      "V_min": 3.0
+    },
+    "power": {
+      "cpu_pct": 42.4,
+      "display_pct": 11.8,
+      "gpu_pct": 7.4,
+      "network_pct": 9.0,
+      "infrastructure_pct": 6.2,
+      "other_pct": 23.2,
+      "brightness_slope": 5.867605031334719,
+      "brightness_intercept": 150.90173679482118,
+      "brightness_r2": 0.44100142469019277,
+      "cpu_freq_exponent": 1.4527044716732849,
+      "cpu_freq_r2": 0.5649324863733136,
+      "scale_factor": 0.024691358024691357,
+      "P_idle": 50,
+      "P_screen_base": 200,
+      "P_cpu_idle": 80,
+      "P_cpu_max": 3500,
+      "P_wifi": 120,
+      "P_cellular": 250,
+      "P_gps": 350
+    }
+  },
+  "data_sources": {
+    "primary": "Zenodo dataset (36,000 samples)",
+    "secondary": "NASA Battery Data Set"
+  },
+  "r1_model": {
+    "equation": "dSOC/dt = -P_total(t) / (V(SOC) * Q_eff) - k_self * SOC",
+    "voltage_model": "OCV polynomial from Zenodo (c0-c5)",
+    "power_model": "Zenodo brightness-power and CPU-frequency models",
+    "data_source": "Zenodo dataset (1,000 unique tests)"
+  },
+  "r2_time_to_empty": {
+    "idle": {
+      "power_mw": 334.056907931643,
+      "time_to_empty_hours": 48.58908100920457,
+      "in_zenodo_range": "True",
+      "params": {
+        "brightness": 0.0,
+        "cpu_load": 0.05,
+        "screen_on": false,
+        "wifi": true,
+        "cellular": false,
+        "gps": false,
+        "n_apps": 2
+      }
+    },
+    "light": {
+      "power_mw": 894.2651491393381,
+      "time_to_empty_hours": 18.160686245395514,
+      "in_zenodo_range": "True",
+      "params": {
+        "brightness": 0.3,
+        "cpu_load": 0.15,
+        "screen_on": true,
+        "wifi": true,
+        "cellular": false,
+        "gps": false,
+        "n_apps": 5
+      }
+    },
+    "moderate": {
+      "power_mw": 1598.4855005647032,
+      "time_to_empty_hours": 10.157077271142219,
+      "in_zenodo_range": "True",
+      "params": {
+        "brightness": 0.5,
+        "cpu_load": 0.35,
+        "screen_on": true,
+        "wifi": true,
+        "cellular": false,
+        "gps": false,
+        "n_apps": 8
+      }
+    },
+    "heavy": {
+      "power_mw": 2696.6272261652266,
+      "time_to_empty_hours": 6.020628707732366,
+      "in_zenodo_range": "True",
+      "params": {
+        "brightness": 0.7,
+        "cpu_load": 0.55,
+        "screen_on": true,
+        "wifi": true,
+        "cellular": true,
+        "gps": false,
+        "n_apps": 10
+      }
+    },
+    "navigation": {
+      "power_mw": 2482.437487027386,
+      "time_to_empty_hours": 6.5394082500590205,
+      "in_zenodo_range": "True",
+      "params": {
+        "brightness": 0.8,
+        "cpu_load": 0.45,
+        "screen_on": true,
+        "wifi": false,
+        "cellular": true,
+        "gps": true,
+        "n_apps": 3
+      }
+    },
+    "gaming": {
+      "power_mw": 3669.7876751688955,
+      "time_to_empty_hours": 4.42508407162211,
+      "in_zenodo_range": "True",
+      "params": {
+        "brightness": 0.9,
+        "cpu_load": 0.85,
+        "screen_on": true,
+        "wifi": true,
+        "cellular": false,
+        "gps": false,
+        "n_apps": 2
+      }
+    },
+    "zenodo_validation": {
+      "mean_hours": 14.183082365267715,
+      "min_hours": 0.4355612258780267,
+      "max_hours": 89.95754941623889,
+      "total_samples": 36000
+    }
+  },
+  "r3_sensitivity": {
+    "brightness_sensitivity": [
+      {
+        "brightness": 0.1,
+        "power_mw": 1303.7812993113143,
+        "time_hours": 12.46070909641201,
+        "pct_change": 18.070671019152552
+      },
+      {
+        "brightness": 0.3,
+        "power_mw": 1421.1333999380088,
+        "time_hours": 11.423827106956793,
+        "pct_change": 8.245760469085777
+      },
+      {
+        "brightness": 0.5,
+        "power_mw": 1538.4855005647032,
+        "time_hours": 10.553602337358383,
+        "pct_change": 0.0
+      },
+      {
+        "brightness": 0.7,
+        "power_mw": 1655.8376011913974,
+        "time_hours": 9.808547330804323,
+        "pct_change": -7.0597221947302415
+      },
+      {
+        "brightness": 0.9,
+        "power_mw": 1773.189701818092,
+        "time_hours": 9.156681340067163,
+        "pct_change": -13.236437688639272
+      },
+      {
+        "brightness": 1.0,
+        "power_mw": 1831.8657521314392,
+        "time_hours": 8.864584273876567,
+        "pct_change": -16.004185201321366
+      }
+    ],
+    "cpu_sensitivity": [
+      {
+        "cpu_load": 0.1,
+        "power_mw": 914.8748592746801,
+        "time_hours": 17.74346651994285,
+        "pct_change": 68.12710914010167
+      },
+      {
+        "cpu_load": 0.3,
+        "power_mw": 1389.173558239423,
+        "time_hours": 11.686441696146934,
+        "pct_change": 10.734148611782038
+      },
+      {
+        "cpu_load": 0.5,
+        "power_mw": 2043.7308486906854,
+        "time_hours": 7.944613652251509,
+        "pct_change": -24.72130938524557
+      },
+      {
+        "cpu_load": 0.7,
+        "power_mw": 2831.320952136603,
+        "time_hours": 5.732717969689952,
+        "pct_change": -45.67998881863423
+      },
+      {
+        "cpu_load": 0.9,
+        "power_mw": 3728.9163264618956,
+        "time_hours": 4.355370094954575,
+        "pct_change": -58.730962606605615
+      }
+    ],
+    "aging_sensitivity": [
+      {
+        "state": "new",
+        "soh": 1.0,
+        "model_time_hours": 10.553602337358383,
+        "zenodo_time_hours": 14.183082365267715,
+        "error_pct": -25.59020623610983
+      },
+      {
+        "state": "slight",
+        "soh": 0.9499190183117884,
+        "model_time_hours": 10.024340034292122,
+        "zenodo_time_hours": 13.471707414841758,
+        "error_pct": -25.589684175828204
+      },
+      {
+        "state": "moderate",
+        "soh": 0.9000284662491005,
+        "model_time_hours": 9.498645835300083,
+        "zenodo_time_hours": 12.764577296743116,
+        "error_pct": -25.58589591741778
+      },
+      {
+        "state": "aged",
+        "soh": 0.85044423929599,
+        "model_time_hours": 8.975119650823357,
+        "zenodo_time_hours": 12.069170579924515,
+        "error_pct": -25.63598640529372
+      },
+      {
+        "state": "old",
+        "soh": 0.800016359403547,
+        "model_time_hours": 8.4424517930191,
+        "zenodo_time_hours": 11.346931483315615,
+        "error_pct": -25.59704969195615
+      },
+      {
+        "state": "eol",
+        "soh": 0.7020066278088006,
+        "model_time_hours": 7.409216809095369,
+        "zenodo_time_hours": 10.765552083354047,
+        "error_pct": -31.176620095947733
+      }
+    ],
+    "temperature_sensitivity": [
+      {
+        "temperature_c": -10,
+        "time_hours": 7.914837045622907,
+        "pct_change": -25.003455762158
+      },
+      {
+        "temperature_c": 0,
+        "time_hours": 8.442221987435692,
+        "pct_change": -20.006252674962727
+      },
+      {
+        "temperature_c": 15,
+        "time_hours": 9.709530348563451,
+        "pct_change": -7.997951427514247
+      },
+      {
+        "temperature_c": 25,
+        "time_hours": 10.553602337358383,
+        "pct_change": 0.0
+      },
+      {
+        "temperature_c": 35,
+        "time_hours": 10.341363211985163,
+        "pct_change": -2.0110585806508996
+      },
+      {
+        "temperature_c": 45,
+        "time_hours": 10.129200870718442,
+        "pct_change": -4.021389598294929
+      }
+    ]
+  },
+  "r4_recommendations": {
+    "component_breakdown": {
+      "CPU (Big+Mid+Little)": 42.42201197078529,
+      "Display": 11.75130326917299,
+      "WLAN/BT": 8.964199536245244,
+      "GPU": 7.428713426841197,
+      "Infrastructure": 6.176138730259941,
+      "GPU3D": 1.9636706596586884,
+      "UFS (Disk)": 1.2177086636850754,
+      "Camera": 0.9614608975491206,
+      "Memory": 0.7789572589003865,
+      "Sensor": 0.5040903264960392,
+      "Cellular": 0.24055142992412784,
+      "GPS": 0.02088779147477066
+    },
+    "recommendations": [
+      {
+        "rank": 1,
+        "action": "Reduce CPU-intensive tasks",
+        "component": "CPU",
+        "component_pct": 42.42201197078529,
+        "estimated_impact": "High (up to +45% battery life)",
+        "details": "Close gaming/video editing apps when not needed"
+      },
+      {
+        "rank": 2,
+        "action": "Reduce screen brightness",
+        "component": "Display",
+        "component_pct": 11.75130326917299,
+        "estimated_impact": "Medium (~12% of total)",
+        "details": "Zenodo shows 3.3x power increase from min to max brightness"
+      },
+      {
+        "rank": 3,
+        "action": "Use WiFi instead of cellular",
+        "component": "Network",
+        "component_pct": 8.964199536245244,
+        "estimated_impact": "Medium (~9% of total)",
+        "details": "WiFi is more power-efficient than cellular"
+      },
+      {
+        "rank": 4,
+        "action": "Reduce graphics-intensive activities",
+        "component": "GPU",
+        "component_pct": 9.392384086499886,
+        "estimated_impact": "Medium (~9% combined)",
+        "details": "Gaming and video playback use GPU heavily"
+      }
+    ],
+    "optimization_impact": {
+      "baseline_power_mw": 2598.6514292735383,
+      "baseline_time_h": 6.250294754102785,
+      "optimized_power_mw": 947.017522065282,
+      "optimized_time_h": 17.140845864618367,
+      "improvement_pct": 174.2406004671518
+    }
+  }
+}
