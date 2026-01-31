@@ -258,9 +258,16 @@ class SmartphoneBatteryModel:
             
         P_total = usage.P_idle
         
-        # Screen power
+        # Screen power (non-linear: AMOLED/LCD efficiency drops at high brightness)
+        # Power increases slowly at low brightness, accelerates at high brightness
+        # Based on empirical OLED power measurements showing ~quadratic relationship
         if usage.screen_on:
-            P_total += usage.P_screen_base * (0.5 + 0.5 * usage.brightness_factor)
+            # Non-linear brightness model: P = P_base * (0.3 + 0.7 * brightness^1.5)
+            # At 0% brightness: 30% of base power (backlight/always-on pixels)
+            # At 100% brightness: 100% of base power
+            # The exponent 1.5 creates realistic acceleration at high brightness
+            brightness_power_factor = 0.3 + 0.7 * (usage.brightness_factor ** 1.5)
+            P_total += usage.P_screen_base * brightness_power_factor
         
         # Processor power with thermal throttling
         thermal_factor = self.calculate_thermal_throttling_factor(usage, duration_hours)
@@ -294,8 +301,16 @@ class SmartphoneBatteryModel:
         if usage.gps_active:
             P_total += usage.P_gps
             
-        # Background apps
-        P_total += usage.P_background_app * usage.n_background_apps
+        # Background apps (diminishing returns due to OS resource management)
+        # First few apps have full impact, additional apps have reduced marginal effect
+        # Models: memory sharing, CPU scheduling limits, and system-level throttling
+        # Using logarithmic saturation: P = P_base * k * ln(1 + n/k) where k controls saturation rate
+        if usage.n_background_apps > 0:
+            k = 5.0  # Saturation constant: effect starts diminishing after ~5 apps
+            # This gives approximately linear behavior for first few apps,
+            # then saturates (e.g., 10 apps ≈ 1.6x effect of 5 apps, not 2x)
+            background_power = usage.P_background_app * k * np.log(1 + usage.n_background_apps / k)
+            P_total += background_power
         
         # Power saving mode reduces all power by ~30%
         if usage.power_saving_mode:
@@ -951,15 +966,22 @@ def run_comprehensive_analysis():
     # Create breakdown for moderate usage
     usage = scenarios['moderate']
     
+    # Non-linear brightness calculation (same as in calculate_power_consumption)
+    brightness_power = usage.P_screen_base * (0.3 + 0.7 * (usage.brightness_factor ** 1.5)) if usage.screen_on else 0
+    
+    # Non-linear background apps calculation (same as in calculate_power_consumption)
+    k = 5.0
+    background_power = usage.P_background_app * k * np.log(1 + usage.n_background_apps / k) if usage.n_background_apps > 0 else 0
+    
     breakdown = {
         'Idle': usage.P_idle,
-        'Screen': usage.P_screen_base * (0.5 + 0.5 * usage.brightness_factor) if usage.screen_on else 0,
+        'Screen': brightness_power,
         'Processor': usage.P_processor_idle + (usage.P_processor_max - usage.P_processor_idle) * usage.processor_load,
         'WiFi': usage.P_wifi if usage.wifi_active else 0,
         'Cellular': usage.P_cellular if usage.cellular_active else 0,
         'Bluetooth': usage.P_bluetooth if usage.bluetooth_active else 0,
         'GPS': usage.P_gps if usage.gps_active else 0,
-        'Background Apps': usage.P_background_app * usage.n_background_apps
+        'Background Apps': background_power
     }
     
     total = sum(breakdown.values())
