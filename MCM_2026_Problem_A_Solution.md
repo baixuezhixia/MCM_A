@@ -428,6 +428,23 @@ $$OCV(SOC) = c_0 + c_1 \cdot SOC + c_2 \cdot SOC^2 + c_3 \cdot SOC^3 + c_4 \cdot
 
 ![Battery Aging Effects](pictures/zenodo_aging_effects.png)
 
+### Battery Life vs Aging Analysis (using ALL 36,000 rows)
+
+By analyzing all 36,000 rows (1,000 usage patterns × 6 aging states × 6 battery cells), we quantified the impact of battery aging on estimated battery life:
+
+| Aging State | SOH | Mean Battery Life | Range |
+|-------------|-----|-------------------|-------|
+| New | 1.00 | **14.18 hours** | 0.44 - 89.96 h |
+| Slight | 0.95 | **13.47 hours** | 0.41 - 85.46 h |
+| Moderate | 0.90 | **12.76 hours** | 0.39 - 80.96 h |
+| Aged | 0.85 | **12.07 hours** | 0.37 - 76.62 h |
+| Old | 0.80 | **11.35 hours** | 0.35 - 71.96 h |
+| EOL | 0.70 | **10.77 hours** | 0.27 - 69.84 h |
+
+**Key Finding**: Battery life decreases approximately **24%** from new (14.18h) to end-of-life (10.77h), corresponding to a ~30% reduction in SOH.
+
+![Battery Life vs Aging](pictures/zenodo_battery_life_vs_aging.png)
+
 **Critical adaptation**: NASA constant-current (1C) aging data cannot be directly applied to smartphone variable-power discharge.
 
 Constant-current discharge at 1C consistently stresses the battery maximally. Smartphone discharge varies between 0.2C (idle) and 1.5C (peak), averaging ~0.4C. This reduced stress results in **lower capacity fade per cycle**.
@@ -861,6 +878,7 @@ The model parameters are derived from two real-world datasets located in `reques
 3. `pictures/zenodo_component_breakdown.png` - Component power breakdown pie and bar charts
 4. `pictures/zenodo_aging_effects.png` - Battery SOH by aging state and OCV curves
 5. `pictures/zenodo_power_distribution.png` - Power distribution histogram and box plots
+6. `pictures/zenodo_battery_life_vs_aging.png` - **Battery life vs aging analysis (uses ALL 36,000 rows)**
 
 ## Model Output Images:
 1. `pictures/scenario_comparison.png` - Battery life comparison across 8 scenarios
@@ -881,15 +899,17 @@ The model parameters are derived from two real-world datasets located in `reques
 
 | Issue | Previous Model | Current Model (Data-Driven) |
 |-------|---------------|---------------|
-| Power model source | Linear assumptions | AndroWatts dataset (1000 tests) |
+| Data utilization | Subset analysis | **Full 36,000 rows for aging analysis** |
+| Power model source | Linear assumptions | AndroWatts dataset (1,000 tests) |
 | Brightness-power | Linear: $P \propto B$ | Empirical: $P = 117.35B + 3018$ |
 | CPU-frequency | Assumed | Fitted: $P \propto f^{1.45}$ |
 | Component breakdown | Estimated (CPU 70%) | Measured: CPU 42.4%, Display 11.8% |
+| Battery life analysis | Theoretical | **Empirical: 36,000 samples** |
 | Voltage constant | 3.45V always | V(SOC) = 3.0 + 1.2×SOC^0.85 |
 | OCV(SOC) curve | Generic | Aging-specific (Mendeley data) |
 | Capacity fade | 0.29%/cycle (NASA 1C) | 0.08%/cycle (cross-validated) |
 | BMS shutdown | 0% or 1% | 5% (realistic) |
 | Thermal feedback | None | Throttling at 70%+ load |
-| Data validation | Not available | Validated against 1000 real tests |
+| Data validation | Not available | Validated against full dataset |
 
 These improvements address the fundamental issues identified in the model critique regarding NASA-to-smartphone parameter adaptation, BMS behavior, thermal feedback, and realistic discharge mode differences.

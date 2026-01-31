@@ -50,6 +50,9 @@ class DatasetAnalysisResults:
     # Battery aging states
     aging_states: Dict[str, Dict[str, float]]
     
+    # Battery life vs aging (from ALL 36,000 rows)
+    battery_life_vs_aging: Dict[str, Dict[str, float]]
+    
     # Overall statistics
     total_power_mean_w: float
     total_power_std_w: float
@@ -240,14 +243,16 @@ class ZenodoDataAnalyzer:
         """
         Analyze battery aging states from Mendeley data
         
+        Uses ALL 36,000 rows to extract battery aging parameters.
+        
         Returns:
             Dict mapping aging state to {SOH, Q_full_Ah, ocv_coefficients}
         """
         print("\n" + "="*60)
-        print("Analyzing Battery Aging States")
+        print("Analyzing Battery Aging States (using ALL 36,000 rows)")
         print("="*60)
         
-        df = self.df
+        df = self.df  # Use full dataset, not unique_tests
         
         # Group by battery state
         aging_cols = ['battery_state_label', 'SOH', 'Q_full_Ah', 
@@ -275,6 +280,47 @@ class ZenodoDataAnalyzer:
             print(f"{state:<12} {row['SOH']:>8.3f} {row['Q_full_Ah']:>12.2f}")
         
         return aging_states
+    
+    def analyze_battery_life_vs_aging(self) -> Dict[str, Dict[str, float]]:
+        """
+        Analyze battery life (t_empty) vs aging state using ALL 36,000 rows
+        
+        This analysis uses the full Cartesian product of phone tests × battery states
+        to understand how aging affects battery life across different usage patterns.
+        
+        Returns:
+            Dict with t_empty statistics by aging state
+        """
+        print("\n" + "="*60)
+        print("Analyzing Battery Life vs Aging (using ALL 36,000 rows)")
+        print("="*60)
+        
+        df = self.df  # Use full dataset
+        
+        t_empty_stats = {}
+        
+        print(f"\n{'State':<12} {'Samples':>8} {'Mean t_empty':>14} {'Min':>10} {'Max':>10}")
+        print("-" * 60)
+        
+        for state in ['new', 'slight', 'moderate', 'aged', 'old', 'eol']:
+            state_data = df[df['battery_state_label'] == state]
+            t_empty = state_data['t_empty_h_est']
+            
+            t_empty_stats[state] = {
+                'n_samples': len(state_data),
+                'mean_hours': t_empty.mean(),
+                'std_hours': t_empty.std(),
+                'min_hours': t_empty.min(),
+                'max_hours': t_empty.max(),
+                'soh_mean': state_data['SOH'].mean(),
+            }
+            
+            print(f"{state:<12} {len(state_data):>8} {t_empty.mean():>14.2f}h {t_empty.min():>10.2f}h {t_empty.max():>10.2f}h")
+        
+        # Calculate overall statistics for all 36000 rows
+        print(f"\n{'TOTAL':<12} {len(df):>8} {df['t_empty_h_est'].mean():>14.2f}h {df['t_empty_h_est'].min():>10.2f}h {df['t_empty_h_est'].max():>10.2f}h")
+        
+        return t_empty_stats
     
     def analyze_overall_statistics(self) -> Dict[str, float]:
         """
@@ -321,6 +367,7 @@ class ZenodoDataAnalyzer:
         cpu_exp, cpu_coef, cpu_r2 = self.analyze_cpu_frequency_power()
         pct_dict, mean_dict = self.analyze_component_breakdown()
         aging_states = self.analyze_battery_aging()
+        battery_life_stats = self.analyze_battery_life_vs_aging()  # Uses ALL 36,000 rows
         overall = self.analyze_overall_statistics()
         
         self.results = DatasetAnalysisResults(
@@ -334,6 +381,7 @@ class ZenodoDataAnalyzer:
             component_percentages=pct_dict,
             component_mean_power_mw=mean_dict,
             aging_states=aging_states,
+            battery_life_vs_aging=battery_life_stats,  # New field
             **overall
         )
         
@@ -360,6 +408,7 @@ class ZenodoDataAnalyzer:
         self._plot_component_breakdown(output_dir)
         self._plot_aging_effects(output_dir)
         self._plot_power_distribution(output_dir)
+        self._plot_battery_life_vs_aging(output_dir)  # New: uses ALL 36,000 rows
         
         print(f"\nFigures saved to {output_dir}/")
     
@@ -592,6 +641,63 @@ class ZenodoDataAnalyzer:
         plt.close()
         print(f"Saved: {output_dir}/zenodo_power_distribution.png")
     
+    def _plot_battery_life_vs_aging(self, output_dir: str):
+        """
+        Plot battery life vs aging state using ALL 36,000 rows
+        
+        This visualization shows how estimated battery life varies with:
+        1. Battery aging state (SOH)
+        2. Usage patterns (1000 different power consumption profiles)
+        """
+        df = self.df  # Use ALL 36,000 rows
+        
+        fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+        
+        # Box plot: t_empty by aging state
+        ax1 = axes[0]
+        states_order = ['new', 'slight', 'moderate', 'aged', 'old', 'eol']
+        
+        # Prepare data for box plot
+        data_by_state = [df[df['battery_state_label'] == s]['t_empty_h_est'].values 
+                         for s in states_order]
+        
+        bp = ax1.boxplot(data_by_state, labels=states_order, patch_artist=True)
+        
+        # Color the boxes
+        colors = plt.cm.RdYlGn(np.linspace(0.8, 0.2, len(states_order)))
+        for patch, color in zip(bp['boxes'], colors):
+            patch.set_facecolor(color)
+            patch.set_alpha(0.7)
+        
+        ax1.set_xlabel('Battery Aging State')
+        ax1.set_ylabel('Estimated Battery Life (hours)')
+        ax1.set_title(f'Battery Life Distribution by Aging State\n(N = {len(df):,} samples)')
+        ax1.grid(True, alpha=0.3, axis='y')
+        
+        # Scatter plot: t_empty vs SOH
+        ax2 = axes[1]
+        # Sample to avoid overplotting
+        sample_size = min(5000, len(df))
+        sample_df = df.sample(n=sample_size, random_state=42)
+        
+        scatter = ax2.scatter(sample_df['SOH'], sample_df['t_empty_h_est'], 
+                              c=sample_df['P_total_uW']/1e6, cmap='viridis',
+                              alpha=0.5, s=10)
+        
+        ax2.set_xlabel('State of Health (SOH)')
+        ax2.set_ylabel('Estimated Battery Life (hours)')
+        ax2.set_title(f'Battery Life vs SOH\n(sampled {sample_size:,} of {len(df):,} points)')
+        ax2.grid(True, alpha=0.3)
+        
+        # Add colorbar
+        cbar = plt.colorbar(scatter, ax=ax2)
+        cbar.set_label('Total Power (W)')
+        
+        plt.tight_layout()
+        plt.savefig(f'{output_dir}/zenodo_battery_life_vs_aging.png', dpi=150, bbox_inches='tight')
+        plt.close()
+        print(f"Saved: {output_dir}/zenodo_battery_life_vs_aging.png (uses ALL {len(df):,} rows)")
+    
     def export_results_json(self, output_path: str = "analysis_results.json"):
         """Export analysis results to JSON"""
         if self.results is None:
@@ -614,6 +720,7 @@ class ZenodoDataAnalyzer:
                 'mean_power_mw': self.results.component_mean_power_mw,
             },
             'aging_states': self.results.aging_states,
+            'battery_life_vs_aging': self.results.battery_life_vs_aging,  # From ALL 36,000 rows
             'overall_statistics': {
                 'total_power_mean_w': self.results.total_power_mean_w,
                 'total_power_std_w': self.results.total_power_std_w,
