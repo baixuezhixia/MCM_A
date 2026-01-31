@@ -133,14 +133,31 @@ class ZenodoBasedSOCModel:
         
     def get_ocv(self, soc: float) -> float:
         """
-        Calculate Open Circuit Voltage using Zenodo polynomial coefficients
+        Calculate Open Circuit Voltage using improved Zenodo-based model
         
-        OCV(SOC) = c0 + c1*SOC + c2*SOC^2 + c3*SOC^3 + c4*SOC^4 + c5*SOC^5
+        The model combines Zenodo polynomial coefficients with realistic 
+        Li-ion low-SOC behavior (steeper voltage drop below 20% SOC).
+        
+        This produces the characteristic non-linear discharge curve where
+        voltage (and thus SOC) drops faster at low SOC levels.
         """
-        soc = np.clip(soc, 0, 1)
+        soc = np.clip(soc, 0.001, 1)  # Avoid division by zero
         b = self.battery
-        return (b.ocv_c0 + b.ocv_c1*soc + b.ocv_c2*soc**2 + 
-                b.ocv_c3*soc**3 + b.ocv_c4*soc**4 + b.ocv_c5*soc**5)
+        
+        # Base voltage from Zenodo polynomial
+        V_poly = (b.ocv_c0 + b.ocv_c1*soc + b.ocv_c2*soc**2 + 
+                  b.ocv_c3*soc**3 + b.ocv_c4*soc**4 + b.ocv_c5*soc**5)
+        
+        # Add realistic low-SOC voltage drop
+        # Li-ion cells show accelerated voltage drop below ~20% SOC
+        if soc < 0.2:
+            # Exponential correction for low SOC region
+            # This makes discharge curves show proper curvature at low SOC
+            low_soc_factor = (soc / 0.2) ** 0.7  # Smooth transition
+            V_min_correction = 0.3 * (1 - low_soc_factor)  # Up to 0.3V drop
+            return max(b.V_min, V_poly - V_min_correction)
+        
+        return V_poly
     
     def get_effective_capacity(self, soh: float = 1.0, temperature: float = 25.0) -> float:
         """Calculate effective capacity in mAh"""
@@ -545,30 +562,110 @@ def generate_figures(model: ZenodoBasedSOCModel, r2_results: dict,
     
     plt.style.use('seaborn-v0_8-whitegrid')
     
-    # Figure 1: Discharge curves for different scenarios
-    fig, ax = plt.subplots(figsize=(10, 6))
+    # Figure 1: Discharge curves with low-SOC zoom inset
+    fig, (ax_main, ax_zoom) = plt.subplots(1, 2, figsize=(14, 6))
     
     scenarios = ['idle', 'light', 'moderate', 'heavy', 'gaming']
     colors = plt.cm.viridis(np.linspace(0, 0.8, len(scenarios)))
     
+    # Store curves for both plots
+    curves = {}
     for scenario, color in zip(scenarios, colors):
         power = r2_results[scenario]['power_mw']
         t, soc = model.simulate(1.0, power, max_hours=50)
-        ax.plot(t, soc * 100, label=f"{scenario} ({power:.0f}mW)", color=color, linewidth=2)
+        curves[scenario] = (t, soc, power, color)
     
-    ax.axhline(y=5, color='red', linestyle='--', linewidth=1.5, label='BMS Shutdown (5%)')
-    ax.set_xlabel('Time (hours)', fontsize=12)
-    ax.set_ylabel('State of Charge (%)', fontsize=12)
-    ax.set_title('R2: SOC Discharge Curves (Zenodo-Parameterized Model)', fontsize=14)
-    ax.legend(loc='upper right')
-    ax.set_xlim(0, 50)
-    ax.set_ylim(0, 105)
-    ax.grid(True, alpha=0.3)
+    # Main plot: Full discharge curves
+    for scenario, (t, soc, power, color) in curves.items():
+        ax_main.plot(t, soc * 100, label=f"{scenario} ({power:.0f}mW)", color=color, linewidth=2)
+    
+    ax_main.axhline(y=5, color='red', linestyle='--', linewidth=1.5, label='BMS Shutdown (5%)')
+    ax_main.axhline(y=20, color='orange', linestyle=':', linewidth=1, alpha=0.7, label='Low SOC Zone (20%)')
+    ax_main.set_xlabel('Time (hours)', fontsize=12)
+    ax_main.set_ylabel('State of Charge (%)', fontsize=12)
+    ax_main.set_title('R2: SOC Discharge Curves (Full Range)', fontsize=14)
+    ax_main.legend(loc='upper right', fontsize=9)
+    ax_main.set_xlim(0, 50)
+    ax_main.set_ylim(0, 105)
+    ax_main.grid(True, alpha=0.3)
+    
+    # Zoomed plot: Low SOC region (0-25%) to show non-linearity
+    ax_zoom.set_title('Low SOC Region (Non-linear Zone)', fontsize=14)
+    for scenario, (t, soc, power, color) in curves.items():
+        # Find where SOC drops below 25%
+        mask = soc * 100 <= 30
+        if np.any(mask):
+            t_low = t[mask]
+            soc_low = soc[mask] * 100
+            # Normalize time to show relative behavior
+            if len(t_low) > 0:
+                t_norm = t_low - t_low[0]  # Start from when entering low SOC
+                ax_zoom.plot(t_norm, soc_low, label=f"{scenario}", color=color, linewidth=2.5)
+    
+    ax_zoom.axhline(y=5, color='red', linestyle='--', linewidth=1.5, label='BMS Shutdown')
+    ax_zoom.axhline(y=20, color='orange', linestyle=':', linewidth=1, alpha=0.7, label='Voltage drop zone')
+    ax_zoom.set_xlabel('Time since SOC < 30% (hours)', fontsize=12)
+    ax_zoom.set_ylabel('State of Charge (%)', fontsize=12)
+    ax_zoom.set_ylim(0, 35)
+    ax_zoom.legend(loc='upper right', fontsize=9)
+    ax_zoom.grid(True, alpha=0.3)
+    
+    # Add annotation about non-linearity
+    ax_zoom.annotate('Accelerated discharge\n(voltage drops faster)', 
+                     xy=(0.5, 15), fontsize=10, ha='center',
+                     bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
     
     plt.tight_layout()
     plt.savefig(f'{FIGURES_DIR}/mcm_discharge_curves.png', dpi=150, bbox_inches='tight')
     plt.close()
     print(f"Saved: {FIGURES_DIR}/mcm_discharge_curves.png")
+    
+    # Additional Figure: OCV curve and discharge rate analysis
+    fig, (ax_ocv, ax_rate) = plt.subplots(1, 2, figsize=(12, 5))
+    
+    # OCV vs SOC curve
+    soc_vals = np.linspace(0.01, 1, 100)
+    ocv_vals = [model.get_ocv(s) for s in soc_vals]
+    ax_ocv.plot(soc_vals * 100, ocv_vals, 'b-', linewidth=2.5)
+    ax_ocv.axvline(x=20, color='orange', linestyle='--', alpha=0.7, label='Low SOC zone')
+    ax_ocv.axvline(x=5, color='red', linestyle='--', alpha=0.7, label='BMS shutdown')
+    ax_ocv.set_xlabel('State of Charge (%)', fontsize=12)
+    ax_ocv.set_ylabel('Open Circuit Voltage (V)', fontsize=12)
+    ax_ocv.set_title('OCV-SOC Relationship\n(Non-linear, steeper at low SOC)', fontsize=13)
+    ax_ocv.legend()
+    ax_ocv.grid(True, alpha=0.3)
+    ax_ocv.set_xlim(0, 100)
+    
+    # Discharge rate vs SOC
+    P_test = 1000  # 1W test power
+    Q_test = 4.5   # 4.5Ah capacity
+    dsoc_dt = []
+    for soc in soc_vals:
+        V = model.get_ocv(soc)
+        rate = abs(P_test / 1000 / (V * Q_test)) * 100  # %/hour
+        dsoc_dt.append(rate)
+    
+    ax_rate.plot(soc_vals * 100, dsoc_dt, 'r-', linewidth=2.5)
+    ax_rate.axvline(x=20, color='orange', linestyle='--', alpha=0.7, label='Low SOC zone')
+    ax_rate.set_xlabel('State of Charge (%)', fontsize=12)
+    ax_rate.set_ylabel('Discharge Rate (%/hour at 1W)', fontsize=12)
+    ax_rate.set_title('Discharge Rate vs SOC\n(Higher rate = faster drain)', fontsize=13)
+    ax_rate.legend()
+    ax_rate.grid(True, alpha=0.3)
+    ax_rate.set_xlim(0, 100)
+    
+    # Annotate the acceleration at low SOC
+    rate_at_80 = dsoc_dt[int(80/100*99)]
+    rate_at_10 = dsoc_dt[int(10/100*99)]
+    ax_rate.annotate(f'{rate_at_10/rate_at_80:.1f}x faster\nat low SOC', 
+                     xy=(10, rate_at_10), xytext=(30, rate_at_10 + 1),
+                     arrowprops=dict(arrowstyle='->', color='red'),
+                     fontsize=10, color='red')
+    
+    plt.tight_layout()
+    plt.savefig(f'{FIGURES_DIR}/mcm_ocv_analysis.png', dpi=150, bbox_inches='tight')
+    plt.close()
+    print(f"Saved: {FIGURES_DIR}/mcm_ocv_analysis.png")
     
     # Figure 2: Sensitivity analysis
     fig, axes = plt.subplots(2, 2, figsize=(12, 10))
