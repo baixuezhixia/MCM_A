@@ -144,20 +144,11 @@ class ZenodoBasedSOCModel:
         soc = np.clip(soc, 0.001, 1)  # Avoid division by zero
         b = self.battery
         
-        # Base voltage from Zenodo polynomial
+        # Voltage from Zenodo OCV polynomial (no artificial modifications)
         V_poly = (b.ocv_c0 + b.ocv_c1*soc + b.ocv_c2*soc**2 + 
                   b.ocv_c3*soc**3 + b.ocv_c4*soc**4 + b.ocv_c5*soc**5)
         
-        # Add realistic low-SOC voltage drop
-        # Li-ion cells show accelerated voltage drop below ~20% SOC
-        if soc < 0.2:
-            # Exponential correction for low SOC region
-            # This makes discharge curves show proper curvature at low SOC
-            low_soc_factor = (soc / 0.2) ** 0.7  # Smooth transition
-            V_min_correction = 0.3 * (1 - low_soc_factor)  # Up to 0.3V drop
-            return max(b.V_min, V_poly - V_min_correction)
-        
-        return V_poly
+        return max(b.V_min, V_poly)
     
     def get_effective_capacity(self, soh: float = 1.0, temperature: float = 25.0) -> float:
         """Calculate effective capacity in mAh"""
@@ -211,6 +202,8 @@ class ZenodoBasedSOCModel:
         Core ODE: dSOC/dt
         
         dSOC/dt = -P / (V(SOC) * Q_eff) - k_self * SOC
+        
+        Uses Zenodo OCV polynomial directly without artificial modifications.
         """
         if soc <= self.battery.shutdown_soc:
             return 0.0
@@ -589,31 +582,30 @@ def generate_figures(model: ZenodoBasedSOCModel, r2_results: dict,
     ax_main.set_ylim(0, 105)
     ax_main.grid(True, alpha=0.3)
     
-    # Zoomed plot: Low SOC region (0-25%) to show non-linearity
-    ax_zoom.set_title('Low SOC Region (Non-linear Zone)', fontsize=14)
-    for scenario, (t, soc, power, color) in curves.items():
-        # Find where SOC drops below 25%
-        mask = soc * 100 <= 30
-        if np.any(mask):
-            t_low = t[mask]
-            soc_low = soc[mask] * 100
-            # Normalize time to show relative behavior
-            if len(t_low) > 0:
-                t_norm = t_low - t_low[0]  # Start from when entering low SOC
-                ax_zoom.plot(t_norm, soc_low, label=f"{scenario}", color=color, linewidth=2.5)
+    # Right plot: OCV curve to explain why discharge is nearly linear
+    ax_ocv = ax_zoom
+    ax_ocv.set_title('OCV-SOC Curve (Zenodo Data)', fontsize=14)
     
-    ax_zoom.axhline(y=5, color='red', linestyle='--', linewidth=1.5, label='BMS Shutdown')
-    ax_zoom.axhline(y=20, color='orange', linestyle=':', linewidth=1, alpha=0.7, label='Voltage drop zone')
-    ax_zoom.set_xlabel('Time since SOC < 30% (hours)', fontsize=12)
-    ax_zoom.set_ylabel('State of Charge (%)', fontsize=12)
-    ax_zoom.set_ylim(0, 35)
-    ax_zoom.legend(loc='upper right', fontsize=9)
-    ax_zoom.grid(True, alpha=0.3)
+    soc_vals = np.linspace(0.01, 1, 100)
+    ocv_vals = [model.get_ocv(s) for s in soc_vals]
+    ax_ocv.plot(soc_vals * 100, ocv_vals, 'b-', linewidth=2.5, label='OCV(SOC)')
+    ax_ocv.axvline(x=20, color='orange', linestyle='--', alpha=0.7, label='Low SOC (20%)')
+    ax_ocv.axvline(x=5, color='red', linestyle='--', alpha=0.7, label='BMS shutdown (5%)')
+    ax_ocv.set_xlabel('State of Charge (%)', fontsize=12)
+    ax_ocv.set_ylabel('Open Circuit Voltage (V)', fontsize=12)
+    ax_ocv.legend(loc='lower right', fontsize=9)
+    ax_ocv.grid(True, alpha=0.3)
+    ax_ocv.set_xlim(0, 100)
     
-    # Add annotation about non-linearity
-    ax_zoom.annotate('Accelerated discharge\n(voltage drops faster)', 
-                     xy=(0.5, 15), fontsize=10, ha='center',
-                     bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
+    # Calculate voltage change percentage
+    V_100 = model.get_ocv(1.0)
+    V_10 = model.get_ocv(0.1)
+    V_change = (V_100 - V_10) / V_100 * 100
+    
+    # Add annotation explaining near-linear behavior
+    ax_ocv.annotate(f'Voltage change: {V_change:.1f}%\n(100%→10% SOC)\n\nNearly flat plateau\n→ quasi-linear discharge', 
+                     xy=(50, 3.5), fontsize=9, ha='center',
+                     bbox=dict(boxstyle='round', facecolor='lightyellow', alpha=0.8))
     
     plt.tight_layout()
     plt.savefig(f'{FIGURES_DIR}/mcm_discharge_curves.png', dpi=150, bbox_inches='tight')
