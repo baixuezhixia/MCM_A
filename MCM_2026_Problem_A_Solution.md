@@ -292,36 +292,59 @@ $$P_{total} = P_{base} + P_{screen}(B) + P_{processor}(t) + P_{network} + P_{GPS
 
 ### Screen Power Model (Data-Driven):
 
-Based on analysis of 1,000 test samples from the AndroWatts dataset, we derived an empirical relationship between brightness level $B$ (0-100) and display power:
+Based on our analysis of 1,000 test samples from the AndroWatts dataset (see `zenodo_data_analyzer.py`), we derived an empirical relationship between brightness level $B$ (0-100) and display power:
 
-$$P_{screen}(B) = k_{scale} \cdot (117.35 \cdot B + 3018) \text{ (mW)}$$
+$$P_{screen}(B) = 117.35 \cdot B + 3018.03 \text{ (raw measurement, mW)}$$
 
-where $k_{scale} \approx 0.05$ is a scaling factor to convert from test harness measurements to realistic smartphone display power. This gives:
-- At 50% brightness: ~250 mW (matching AMOLED typical values)
-- At 100% brightness: ~500 mW
+**Fitted parameters** (from actual data analysis run):
+- Slope: **117.35 mW per brightness unit**
+- Intercept: **3018.03 mW** (baseline display power)
+- $R^2 = 0.4410$
 
-The underlying relationship has $R^2 = 0.44$, which captures the dominant effect of brightness while acknowledging that other factors (content type, display technology, ambient light adaptation) contribute to the remaining variance.
+After applying a scaling factor $k_{scale} \approx 0.05$ to convert from test harness measurements to realistic smartphone display power:
 
-| Brightness Range | Relative Power | Normalized to 50% |
-|------------------|----------------|-------------------|
-| 0-20% | 48.6% | ~125 mW |
-| 21-40% | 79.3% | ~200 mW |
-| 41-60% | 106.7% | ~265 mW |
-| 61-80% | 141.7% | ~350 mW |
-| 81-100% | 158.0% | ~400 mW |
+$$P_{screen,scaled}(B) = k_{scale} \cdot (117.35 \cdot B + 3018) \approx 5.87 \cdot B + 151 \text{ (mW)}$$
+
+This gives realistic values:
+- At 50% brightness: ~445 mW
+- At 100% brightness: ~738 mW
+
+The $R^2 = 0.44$ indicates that brightness explains ~44% of display power variance, while other factors (content type, display technology, ambient light) contribute to the remaining 56%.
+
+**Measured Display Power by Brightness Range** (from analysis):
+
+| Brightness Range | Raw Power (mW) | Scaled (mW) | Sample Count |
+|------------------|----------------|-------------|--------------|
+| 0-20% | 4,067 | ~203 | 205 |
+| 21-40% | 6,646 | ~332 | 204 |
+| 41-60% | 8,937 | ~447 | 209 |
+| 61-80% | 11,868 | ~593 | 181 |
+| 81-100% | 13,235 | ~662 | 193 |
+
+![Brightness vs Display Power](pictures/zenodo_brightness_power.png)
 
 ### Processor Power with Thermal Throttling:
 
-From the AndroWatts data, CPU power follows a **frequency-power law**:
+From our analysis of the AndroWatts data (see `zenodo_data_analyzer.py`), CPU power follows a **frequency-power law**:
 
-$$P_{CPU} \propto f^{1.45}$$
+$$P_{CPU} = 22883.25 \cdot f^{1.45} \text{ (raw measurement, mW)}$$
 
-This exponent of 1.45 (fitted, $R^2 = 0.56$) is lower than the theoretical CMOS power law ($P \propto f \cdot V^2$) because:
+**Fitted parameters** (from actual data analysis run):
+- Coefficient: **22883.25**
+- Exponent: **1.45**
+- $R^2 = 0.5649$
+
+After scaling to realistic smartphone values:
+$$P_{CPU,scaled} \propto f^{1.45}$$
+
+The exponent of 1.45 is lower than the theoretical CMOS power law ($P \propto f \cdot V^2$) because:
 1. Modern SoCs use aggressive DVFS (Dynamic Voltage and Frequency Scaling)
 2. Power management masks true dynamic power relationship
 3. Static power becomes dominant at lower frequencies
 
-The moderate $R^2$ value reflects the influence of other factors: workload type, voltage scaling, and thermal conditions.
+The $R^2 = 0.56$ reflects the influence of other factors: workload type, voltage scaling, and thermal conditions.
+
+![CPU Frequency vs Power](pictures/zenodo_cpu_frequency_power.png)
 
 The thermal throttling model:
 
@@ -329,20 +352,28 @@ $$P_{processor}(t) = P_{idle,CPU} + (P_{max,CPU} - P_{idle,CPU}) \cdot \lambda \
 
 where $f_{thermal}(t) = 1 - 0.4 \cdot (1 - e^{-t/0.25}) \cdot \max(0, \frac{\lambda - 0.7}{0.3})$ for sustained high load.
 
-### Component Power Breakdown (Relative Proportions from AndroWatts):
+### Component Power Breakdown (From AndroWatts Analysis):
 
-The dataset provides valuable **relative proportions** even though absolute values require scaling:
+Our analysis provides the actual **component power breakdown** from 1,000 real device measurements:
 
-| Component | % of Total | Scaled Typical (mW) | Notes |
-|-----------|------------|---------------------|-------|
-| CPU (Big+Mid+Little) | 42.4% | 800-2500 | Dominant consumer |
-| Display | 11.8% | 200-500 | Brightness-dependent |
-| WLAN/BT | 9.0% | 100-200 | Combined WiFi + Bluetooth |
-| GPU | 7.4% | 100-300 | Graphics processing |
-| Infrastructure | 6.2% | 80-150 | System overhead |
-| Other (Memory, Sensors, etc.) | 23.2% | 200-400 | Various subsystems |
+| Component | Mean Power (mW) | % of Total |
+|-----------|----------------|------------|
+| CPU (Big+Mid+Little) | 36,457 | **42.4%** |
+| Display | 8,898 | **11.8%** |
+| WLAN/BT | 6,609 | **9.0%** |
+| GPU | 6,009 | **7.4%** |
+| Infrastructure | 5,057 | **6.2%** |
+| GPU3D | 1,557 | 2.0% |
+| UFS (Disk) | 909 | 1.2% |
+| Camera | 716 | 1.0% |
+| Memory | 646 | 0.8% |
+| Sensor | 376 | 0.5% |
+| Cellular | 178 | 0.2% |
+| GPS | 16 | 0.0% |
 
-**Realistic Total Power Estimates** (scaled from proportions):
+![Component Power Breakdown](pictures/zenodo_component_breakdown.png)
+
+**Scaled to realistic smartphone total power** (applying ~0.03 scaling factor):
 - Light use: ~1,500 mW (1.5 W)
 - Moderate use: ~2,500 mW (2.5 W)
 - Heavy use: ~5,000 mW (5.0 W)
@@ -374,20 +405,28 @@ $$f_{temp}(T) = \begin{cases}
 
 **Data Source**: Battery aging parameters are derived from the **Mendeley Battery Degradation Dataset** [18], which provides real lithium-ion battery cycling data with OCV-SOC curves at different aging states.
 
-### Aging State Parameters (from Mendeley Dataset):
+### Aging State Parameters (from Actual Analysis):
+
+Our `zenodo_data_analyzer.py` extracted the following aging states from the dataset:
 
 | Aging State | SOH | Q_full (Ah) | Description |
 |-------------|-----|-------------|-------------|
-| New | 1.000 | 15.39 | Fresh battery |
-| Slight | 0.950 | 14.62 | ~50 cycles |
-| Moderate | 0.900 | 13.85 | ~100 cycles |
-| Aged | 0.850 | 13.10 | ~200 cycles |
-| Old | 0.800 | 12.31 | ~300 cycles |
-| EOL | 0.702 | 11.68 | End of life |
+| New | **1.000** | 2.78 | Fresh battery |
+| Slight | **0.950** | 2.64 | Early aging |
+| Moderate | **0.900** | 2.50 | Moderate aging |
+| Aged | **0.850** | 2.36 | Significant aging |
+| Old | **0.800** | 2.22 | Near replacement |
+| EOL | **0.633** | 1.76 | End of life |
 
 The dataset provides OCV(SOC) polynomial coefficients ($c_0$ through $c_5$) for each aging state, enabling accurate voltage modeling across the battery lifecycle:
 
 $$OCV(SOC) = c_0 + c_1 \cdot SOC + c_2 \cdot SOC^2 + c_3 \cdot SOC^3 + c_4 \cdot SOC^4 + c_5 \cdot SOC^5$$
+
+**Example OCV coefficients for "new" battery** (from analysis):
+- $c_0 = 3.349$, $c_1 = 2.441$, $c_2 = -9.555$
+- $c_3 = 20.922$, $c_4 = -20.325$, $c_5 = 7.381$
+
+![Battery Aging Effects](pictures/zenodo_aging_effects.png)
 
 **Critical adaptation**: NASA constant-current (1C) aging data cannot be directly applied to smartphone variable-power discharge.
 
@@ -775,20 +814,30 @@ The model provides a practical framework for understanding smartphone battery be
 
 # Appendix A: Model Code
 
-The complete Python implementation is available in `battery_model.py`. Key components include:
+The complete Python implementation is available in the following files:
 
-- `SmartphoneBatteryModel`: Main model class with ODE integration
-- `get_voltage(SOC)`: Non-linear voltage model
-- `calculate_thermal_throttling_factor()`: Thermal throttling simulation
-- `BatteryParameters`: Battery parameters (smartphone-adapted)
-- `UsageParameters`: Power consumption with signal strength, throttling
-- `create_usage_scenarios()`: Eight realistic usage profiles
-- `run_comprehensive_analysis()`: Full analysis pipeline
-
-Additional files:
-- `nasa_battery_data_loader.py`: NASA data extraction for reference
+## Core Model Files:
+- `battery_model.py`: Main battery model class with ODE integration
+- `soc_model.py`: Alternative SOC model implementation  
 - `dataset_validation.py`: Model validation framework
-- `soc_model.py`: Alternative SOC model implementation
+- `nasa_battery_data_loader.py`: NASA data extraction for reference
+
+## Data Analysis Code (NEW):
+- **`zenodo_data_analyzer.py`**: Data-driven analysis of AndroWatts + Mendeley dataset
+  - `ZenodoDataAnalyzer` class: Loads and processes the 36,000-row dataset
+  - `analyze_brightness_power()`: Fits brightness-display power model
+  - `analyze_cpu_frequency_power()`: Fits CPU frequency-power law
+  - `analyze_component_breakdown()`: Computes power breakdown by component
+  - `analyze_battery_aging()`: Extracts SOH and OCV parameters
+  - `generate_figures()`: Creates visualization plots
+  - `export_results_json()`: Exports analysis results to JSON
+
+## Analysis Results:
+- **`analysis_results.json`**: Complete analysis output including:
+  - Brightness model: slope=117.35, intercept=3018.03, R²=0.4410
+  - CPU model: exponent=1.45, coefficient=22883.25, R²=0.5649
+  - Component percentages and mean power values
+  - Aging state parameters with OCV polynomial coefficients
 
 ## Data Files
 
@@ -806,7 +855,14 @@ The model parameters are derived from two real-world datasets located in `reques
 
 # Appendix B: Generated Visualizations
 
-## Model Output Images
+## Data Analysis Figures (from `zenodo_data_analyzer.py`):
+1. `pictures/zenodo_brightness_power.png` - Brightness vs Display Power scatter plot and bar chart
+2. `pictures/zenodo_cpu_frequency_power.png` - CPU Frequency vs Power with power law fit
+3. `pictures/zenodo_component_breakdown.png` - Component power breakdown pie and bar charts
+4. `pictures/zenodo_aging_effects.png` - Battery SOH by aging state and OCV curves
+5. `pictures/zenodo_power_distribution.png` - Power distribution histogram and box plots
+
+## Model Output Images:
 1. `pictures/scenario_comparison.png` - Battery life comparison across 8 scenarios
 2. `pictures/discharge_curves.png` - SOC vs time showing non-linear voltage effects
 3. `pictures/sensitivity_analysis.png` - Parameter sensitivity with thermal throttling
