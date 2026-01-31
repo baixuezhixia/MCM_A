@@ -10,8 +10,20 @@ This report validates our continuous-time battery model against:
 
 ### Data Source
 - B. Saha and K. Goebel (2007). "Battery Data Set", NASA Ames Prognostics Data Repository
-- 21 batteries analyzed with 24-168 charge/discharge cycles
+- **36 batteries analyzed** from 38 total files (2 files had data errors: B0050, B0052)
+- Batteries include: B0005-B0007, B0018, B0025-B0056 across 6 experiment batches
+- Cycle counts range from 24 to 197 charge/discharge cycles
 - Real experimental data from accelerated aging tests
+
+### Dataset Statistics
+| Batch | Batteries | Cycles Range | Notes |
+|-------|-----------|--------------|-------|
+| BatteryAgingARC-FY08Q4 | B0005-B0007, B0018 | 132-168 | Primary aging dataset |
+| BatteryAgingARC_25-44 | B0025-B0044 | 28-197 | Extended test series |
+| BatteryAgingARC_25_26_27_28_P1 | B0025-B0028 | 28 | Phase 1 (duplicate of subset) |
+| BatteryAgingARC_45_46_47_48 | B0045-B0048 | 69-70 | High-temperature tests |
+| BatteryAgingARC_49_50_51_52 | B0049, B0051 | 24 | (B0050, B0052 corrupted) |
+| BatteryAgingARC_53_54_55_56 | B0053-B0056 | 55-102 | Variable conditions |
 
 ### Capacity Fade Validation
 

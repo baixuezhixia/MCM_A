@@ -378,9 +378,9 @@ We analyzed the NASA Ames Prognostics Data Repository to understand battery fund
 
 ### NASA Dataset Observations
 
-- **21 batteries** analyzed (B0005-B0056)
+- **36 batteries** analyzed (B0005-B0056) from 38 total files (2 corrupted files excluded)
 - **Discharge mode**: Constant-current 2A (1C rate)
-- **Capacity fade**: 0.2892%/cycle average
+- **Capacity fade**: 0.2783%/cycle average across all valid batteries
 
 ### Key Adaptation for Smartphones
 

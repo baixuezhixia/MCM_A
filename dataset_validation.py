@@ -832,7 +832,8 @@ This report validates our continuous-time battery model against:
 
 ### Data Source
 - B. Saha and K. Goebel (2007). "Battery Data Set", NASA Ames Prognostics Data Repository
-- 21 batteries analyzed with 24-168 charge/discharge cycles
+- 36 batteries analyzed from 38 total files (2 corrupted files: B0050, B0052)
+- Cycle counts range from 24-197 charge/discharge cycles
 - Real experimental data from accelerated aging tests
 
 ### Capacity Fade Validation

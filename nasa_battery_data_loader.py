@@ -229,9 +229,18 @@ class NASABatteryDataLoader:
         
         return curves
     
-    def load_all_data(self, min_cycles: int = 20, require_positive_fade: bool = True):
-        """Load all battery data from the dataset"""
+    def load_all_data(self, min_cycles: int = 1, require_positive_fade: bool = False):
+        """Load all battery data from the dataset
+        
+        Args:
+            min_cycles: Minimum number of cycles required (default: 1 to include all)
+            require_positive_fade: Whether to require positive capacity fade (default: False)
+        """
         mat_files = self.find_all_mat_files()
+        
+        loaded_count = 0
+        skipped_count = 0
+        error_count = 0
         
         for filepath in mat_files:
             battery_data = self.load_battery_file(filepath)
@@ -240,16 +249,41 @@ class NASABatteryDataLoader:
                 # Filter based on criteria
                 if battery_data.n_cycles >= min_cycles:
                     if not require_positive_fade or battery_data.capacity_fade_rate > 0:
-                        # Avoid duplicates
-                        if battery_data.battery_id not in self.battery_data:
-                            self.battery_data[battery_data.battery_id] = battery_data
+                        # Create unique key using directory name + battery_id to handle duplicates
+                        # Extract directory name (e.g., "1. BatteryAgingARC-FY08Q4")
+                        dir_name = os.path.basename(os.path.dirname(filepath))
+                        # Extract a short directory prefix (e.g., "ARC-FY08Q4" or "25_26_27_28_P1")
+                        dir_parts = dir_name.split('_', 1)
+                        if len(dir_parts) > 1:
+                            dir_suffix = dir_parts[1].replace('BatteryAgingARC_', '').replace('BatteryAgingARC', '')
+                        else:
+                            dir_suffix = dir_name.split('.')[-1].strip().replace('BatteryAgingARC-', '')
+                        
+                        # Create unique key
+                        unique_key = f"{battery_data.battery_id}_{dir_suffix}"
+                        
+                        if unique_key not in self.battery_data:
+                            self.battery_data[unique_key] = battery_data
+                            loaded_count += 1
                             
                             # Load discharge curves for validation
                             curves = self.load_discharge_curves(filepath)
                             if curves:
-                                self.discharge_curves[battery_data.battery_id] = curves
+                                self.discharge_curves[unique_key] = curves
+                        else:
+                            skipped_count += 1
+                    else:
+                        skipped_count += 1
+                else:
+                    skipped_count += 1
+            else:
+                error_count += 1
         
         print(f"Loaded {len(self.battery_data)} batteries from NASA dataset")
+        print(f"  - Total files: {len(mat_files)}")
+        print(f"  - Successfully loaded: {loaded_count}")
+        print(f"  - Skipped (filters/duplicates): {skipped_count}")
+        print(f"  - Errors: {error_count}")
         return self
     
     def estimate_capacity_fade_rate(self) -> Dict:
@@ -395,11 +429,12 @@ class NASABatteryDataLoader:
     
     def plot_capacity_fade(self, save_path: str = 'pictures/nasa_capacity_fade.png'):
         """Plot capacity fade curves from all batteries"""
-        plt.figure(figsize=(12, 8))
+        plt.figure(figsize=(14, 10))
         
-        colors = plt.cm.viridis(np.linspace(0, 1, len(self.battery_data)))
+        n_batteries = len(self.battery_data)
+        colors = plt.cm.viridis(np.linspace(0, 1, n_batteries))
         
-        for (battery_id, data), color in zip(self.battery_data.items(), colors):
+        for (battery_id, data), color in zip(sorted(self.battery_data.items()), colors):
             # Normalize to percentage of initial capacity
             relative_capacity = data.capacities / data.initial_capacity * 100
             plt.plot(data.cycle_numbers, relative_capacity, 
@@ -407,8 +442,14 @@ class NASABatteryDataLoader:
         
         plt.xlabel('Cycle Number', fontsize=12)
         plt.ylabel('Capacity Retention (%)', fontsize=12)
-        plt.title('Battery Capacity Fade from NASA Aging Dataset', fontsize=14)
-        plt.legend(loc='lower left', fontsize=8, ncol=2)
+        plt.title(f'Battery Capacity Fade from NASA Aging Dataset ({n_batteries} batteries)', fontsize=14)
+        
+        # Adjust legend based on number of batteries
+        if n_batteries <= 25:
+            plt.legend(loc='lower left', fontsize=7, ncol=3)
+        else:
+            plt.legend(loc='lower left', fontsize=6, ncol=4, framealpha=0.9)
+        
         plt.grid(True, alpha=0.3)
         plt.ylim(50, 105)
         
@@ -465,7 +506,7 @@ class NASABatteryDataLoader:
 def load_nasa_data():
     """Convenience function to load NASA battery data"""
     loader = NASABatteryDataLoader()
-    loader.load_all_data(min_cycles=20)
+    loader.load_all_data(min_cycles=1)  # Load all batteries
     return loader
 
 
@@ -474,9 +515,9 @@ if __name__ == "__main__":
     print("NASA Battery Data Analysis")
     print("="*70)
     
-    # Load data
+    # Load data - load ALL batteries (min_cycles=1)
     loader = NASABatteryDataLoader()
-    loader.load_all_data(min_cycles=20)
+    loader.load_all_data(min_cycles=1)
     
     # Print battery summary
     print("\nLoaded Batteries:")
