@@ -63,6 +63,10 @@ class DatasetAnalysisResults:
 class ZenodoDataAnalyzer:
     """
     Analyzer for the combined AndroWatts + Mendeley dataset
+    
+    This class processes the master modeling table containing:
+    - 36,000 rows (1,000 phone tests × 36 battery states)
+    - 93 columns including power measurements, device state, and battery parameters
     """
     
     def __init__(self, data_path: str):
@@ -70,7 +74,8 @@ class ZenodoDataAnalyzer:
         Initialize with path to the master modeling table CSV
         
         Args:
-            data_path: Path to MCM2026A题锂电池数据表：master_modeling_table.csv
+            data_path: Path to the master modeling table CSV file
+                      (e.g., 'MCM2026A Battery Data Table: master_modeling_table.csv')
         """
         self.data_path = data_path
         self.df = None
@@ -627,14 +632,27 @@ class ZenodoDataAnalyzer:
         return results_dict
 
 
-def main():
-    """Main analysis function"""
-    # Path to the dataset
-    data_path = "requests/Zenodo Data Set/MCM2026A题锂电池数据表：master_modeling_table.csv"
+# Default data path - can be overridden via command line or function argument
+DEFAULT_DATA_PATH = "requests/Zenodo Data Set/MCM2026A题锂电池数据表：master_modeling_table.csv"
+# English description: MCM2026A Battery Data Table: master_modeling_table.csv
+
+
+def main(data_path: str = None):
+    """
+    Main analysis function
+    
+    Args:
+        data_path: Optional path to the CSV data file. 
+                   Defaults to DEFAULT_DATA_PATH if not provided.
+    """
+    # Use default path if not specified
+    if data_path is None:
+        data_path = DEFAULT_DATA_PATH
     
     # Check if file exists
     if not os.path.exists(data_path):
         print(f"Error: Data file not found at {data_path}")
+        print("Expected file: MCM2026A Battery Data Table (master_modeling_table.csv)")
         return None
     
     # Create analyzer and run analysis

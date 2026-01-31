@@ -294,32 +294,30 @@ $$P_{total} = P_{base} + P_{screen}(B) + P_{processor}(t) + P_{network} + P_{GPS
 
 Based on our analysis of 1,000 test samples from the AndroWatts dataset (see `zenodo_data_analyzer.py`), we derived an empirical relationship between brightness level $B$ (0-100) and display power:
 
-$$P_{screen}(B) = 117.35 \cdot B + 3018.03 \text{ (raw measurement, mW)}$$
+$$P_{screen,raw}(B) = 117.35 \cdot B + 3018.03 \text{ (raw measurement, mW)}$$
 
 **Fitted parameters** (from actual data analysis run):
 - Slope: **117.35 mW per brightness unit**
-- Intercept: **3018.03 mW** (baseline display power)
+- Intercept: **3018.03 mW** (baseline display power including measurement overhead)
 - $R^2 = 0.4410$
 
-After applying a scaling factor $k_{scale} \approx 0.05$ to convert from test harness measurements to realistic smartphone display power:
+**Note on Scaling**: The raw measurements include test harness overhead and measure power at the rail level. For realistic smartphone values, we normalize the data. Using the measured range (4,067 mW to 13,235 mW across brightness levels) and typical smartphone display power (200-700 mW), we derive a scaling factor of approximately 0.05:
 
-$$P_{screen,scaled}(B) = k_{scale} \cdot (117.35 \cdot B + 3018) \approx 5.87 \cdot B + 151 \text{ (mW)}$$
+$$P_{screen,scaled}(B) \approx 0.05 \cdot P_{screen,raw}(B) = 5.87 \cdot B + 151 \text{ (mW)}$$
 
-This gives realistic values:
-- At 50% brightness: ~445 mW
-- At 100% brightness: ~738 mW
-
-The $R^2 = 0.44$ indicates that brightness explains ~44% of display power variance, while other factors (content type, display technology, ambient light) contribute to the remaining 56%.
+The key finding is the **linear relationship** between brightness and display power, with brightness explaining ~44% of the variance ($R^2 = 0.44$). Other factors (content type, display technology, ambient light) contribute to the remaining variance.
 
 **Measured Display Power by Brightness Range** (from analysis):
 
-| Brightness Range | Raw Power (mW) | Scaled (mW) | Sample Count |
-|------------------|----------------|-------------|--------------|
-| 0-20% | 4,067 | ~203 | 205 |
-| 21-40% | 6,646 | ~332 | 204 |
-| 41-60% | 8,937 | ~447 | 209 |
-| 61-80% | 11,868 | ~593 | 181 |
-| 81-100% | 13,235 | ~662 | 193 |
+| Brightness Range | Raw Power (mW) | Relative to 50% | Sample Count |
+|------------------|----------------|-----------------|--------------|
+| 0-20% | 4,067 | 45.5% | 205 |
+| 21-40% | 6,646 | 74.4% | 204 |
+| 41-60% | 8,937 | 100% (baseline) | 209 |
+| 61-80% | 11,868 | 132.8% | 181 |
+| 81-100% | 13,235 | 148.1% | 193 |
+
+The display power increases by approximately **3.3× from lowest to highest brightness**.
 
 ![Brightness vs Display Power](pictures/zenodo_brightness_power.png)
 
@@ -417,6 +415,8 @@ Our `zenodo_data_analyzer.py` extracted the following aging states from the data
 | Aged | **0.850** | 2.36 | Significant aging |
 | Old | **0.800** | 2.22 | Near replacement |
 | EOL | **0.633** | 1.76 | End of life |
+
+**Note on capacity values**: The Q_full values (2.78 Ah = 2780 mAh for new battery) are from the Mendeley Battery Degradation Dataset test cells. For smartphone modeling, these values are scaled to typical smartphone capacities (4000-5000 mAh) while preserving the **relative SOH degradation pattern**.
 
 The dataset provides OCV(SOC) polynomial coefficients ($c_0$ through $c_5$) for each aging state, enabling accurate voltage modeling across the battery lifecycle:
 
