@@ -249,18 +249,24 @@ class NASABatteryDataLoader:
                 # Filter based on criteria
                 if battery_data.n_cycles >= min_cycles:
                     if not require_positive_fade or battery_data.capacity_fade_rate > 0:
-                        # Create unique key using directory name + battery_id to handle duplicates
-                        # Extract directory name (e.g., "1. BatteryAgingARC-FY08Q4")
+                        # Create unique key using battery_id + batch identifier to handle duplicates
+                        # Directory names follow format: "N. BatteryAgingARC-XXXX" or "N. BatteryAgingARC_XX_YY_ZZ"
                         dir_name = os.path.basename(os.path.dirname(filepath))
-                        # Extract a short directory prefix (e.g., "ARC-FY08Q4" or "25_26_27_28_P1")
+                        
+                        # Extract batch identifier from directory name
+                        # Examples: "1. BatteryAgingARC-FY08Q4" -> "FY08Q4"
+                        #          "3. BatteryAgingARC_25-44" -> "25-44"
+                        #          "2. BatteryAgingARC_25_26_27_28_P1" -> "25_26_27_28_P1"
                         dir_parts = dir_name.split('_', 1)
                         if len(dir_parts) > 1:
-                            dir_suffix = dir_parts[1].replace('BatteryAgingARC_', '').replace('BatteryAgingARC', '')
+                            # Format: "N. BatteryAgingARC_XX..." -> extract after first underscore
+                            batch_id = dir_parts[1].replace('BatteryAgingARC_', '').replace('BatteryAgingARC', '')
                         else:
-                            dir_suffix = dir_name.split('.')[-1].strip().replace('BatteryAgingARC-', '')
+                            # Format: "N. BatteryAgingARC-XXXX" -> extract after the dash in ARC-
+                            batch_id = dir_name.split('.')[-1].strip().replace('BatteryAgingARC-', '')
                         
-                        # Create unique key
-                        unique_key = f"{battery_data.battery_id}_{dir_suffix}"
+                        # Create unique key combining battery ID and batch identifier
+                        unique_key = f"{battery_data.battery_id}_{batch_id}"
                         
                         if unique_key not in self.battery_data:
                             self.battery_data[unique_key] = battery_data
