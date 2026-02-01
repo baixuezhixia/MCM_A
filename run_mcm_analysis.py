@@ -69,6 +69,7 @@ class ZenodoBasedBatteryParams:
     # Voltage range
     V_max: float = 4.2
     V_min: float = 3.0
+    V_nominal: float = 3.7  # Nominal voltage for energy-based SOC calculation
 
 
 @dataclass
@@ -118,10 +119,13 @@ class ZenodoBasedSOCModel:
     """
     Continuous-time SOC model using Zenodo-derived parameters
     
-    Core equation:
-    dSOC/dt = -P_total(t) / (V(SOC) * Q_effective) - k_self * SOC
+    SOC Definition (per problem statement):
+    SOC = E_remaining / E_total (energy ratio, 能量比值，不是电荷比值)
     
-    where V(SOC) uses OCV polynomial from Zenodo/Mendeley data
+    Core equation (energy-based):
+    dSOC/dt = -P_total(t) / E_effective - k_self * SOC
+    
+    where E_effective = V_nominal × Q_effective is the energy capacity (Wh)
     """
     
     def __init__(self, battery: ZenodoBasedBatteryParams = None,
@@ -199,24 +203,29 @@ class ZenodoBasedSOCModel:
     def soc_derivative(self, t: float, soc: float, power_mw: float, 
                       soh: float = 1.0, temperature: float = 25.0) -> float:
         """
-        Core ODE: dSOC/dt
+        Core ODE: dSOC/dt (energy-based)
         
-        dSOC/dt = -P / (V(SOC) * Q_eff) - k_self * SOC
+        Per problem statement: SOC = E_remaining / E_total (能量比值)
         
-        Uses Zenodo OCV polynomial directly without artificial modifications.
+        dSOC/dt = -P / E_eff - k_self * SOC
+        
+        where E_eff = V_nominal × Q_eff is the energy capacity (Wh).
+        Uses V_nominal (constant) for consistent energy-based SOC definition.
         """
         if soc <= self.battery.shutdown_soc:
             return 0.0
         
-        V = self.get_ocv(soc)
         Q_eff = self.get_effective_capacity(soh, temperature)
         
         # Power in Watts, Capacity in Ah
         P_watts = power_mw / 1000
         Q_ah = Q_eff / 1000
         
-        # Discharge rate (per hour)
-        discharge_rate = -P_watts / (V * Q_ah)
+        # Energy capacity in Wh (E = V_nominal × Q)
+        E_wh = self.battery.V_nominal * Q_ah
+        
+        # Discharge rate (per hour) using energy-based formula
+        discharge_rate = -P_watts / E_wh
         self_discharge = -self.k_self * soc
         
         return discharge_rate + self_discharge
@@ -815,18 +824,22 @@ def main():
     
     # R1: Model is the model itself - document its structure
     print("\n" + "="*70)
-    print("R1: Continuous-Time SOC Model")
+    print("R1: Continuous-Time SOC Model (Energy-Based)")
     print("="*70)
+    print("\nSOC Definition (per problem statement):")
+    print("  SOC = E_remaining / E_total (能量比值，不是电荷比值)")
     print("\nGoverning equation:")
-    print("  dSOC/dt = -P_total(t) / (V(SOC) * Q_eff) - k_self * SOC")
+    print("  dSOC/dt = -P_total(t) / E_eff - k_self * SOC")
     print("\nwhere:")
-    print("  V(SOC) = OCV polynomial from Zenodo/Mendeley data")
-    print("  Q_eff = f(SOH, temperature)")
+    print("  E_eff = V_nominal × Q_eff (energy capacity in Wh)")
+    print("  V_nominal = 3.7V (constant nominal voltage)")
+    print("  Q_eff = f(SOH, temperature) (charge capacity)")
     print("  P_total = f(brightness, CPU_load, network, ...) using Zenodo model")
     
     all_results['r1_model'] = {
-        'equation': 'dSOC/dt = -P_total(t) / (V(SOC) * Q_eff) - k_self * SOC',
-        'voltage_model': 'OCV polynomial from Zenodo (c0-c5)',
+        'equation': 'dSOC/dt = -P_total(t) / E_eff - k_self * SOC',
+        'soc_definition': 'SOC = E_remaining / E_total (energy ratio)',
+        'energy_model': 'E_eff = V_nominal × Q_eff (V_nominal = 3.7V)',
         'power_model': 'Zenodo brightness-power and CPU-frequency models',
         'data_source': 'Zenodo dataset (1,000 unique tests)'
     }

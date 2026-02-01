@@ -116,21 +116,24 @@ class SmartphoneBatteryModel:
     """
     Continuous-time model for smartphone battery state of charge (SOC)
     
+    SOC Definition (per problem statement):
+    SOC = E_remaining / E_total (energy ratio, not charge ratio)
+    
     Enhanced model features:
-    1. SOC-dependent voltage curve (non-linear)
+    1. SOC-dependent voltage curve for OCV calculation
     2. BMS shutdown threshold at 5% SOC
     3. Thermal throttling feedback loop
     4. Power peak limiting (BMS protection)
     5. Dynamic cellular power based on signal strength
     
     Main governing equation:
-    dSOC/dt = -P_total(t) / (V(SOC) * Q_effective(T, cycles)) - k_self * SOC
+    dSOC/dt = -P_total(t) / E_effective(T, cycles) - k_self * SOC
     
     where:
-    - SOC: State of charge (0 to 1)
+    - SOC: State of charge (0 to 1) = E_remaining / E_total (energy ratio)
     - P_total: Total power consumption (W) with BMS limiting
-    - V(SOC): SOC-dependent voltage (non-linear)
-    - Q_effective: Effective capacity considering temperature and aging
+    - E_effective: Effective energy capacity (Wh) = V_nominal × Q_effective
+    - k_self: Self-discharge rate
     """
     
     def __init__(self, battery_params: BatteryParameters = None, 
@@ -159,9 +162,12 @@ class SmartphoneBatteryModel:
     
     def get_effective_capacity(self, temperature: float) -> float:
         """
-        Calculate effective battery capacity considering temperature and aging
+        Calculate effective charge capacity (mAh) considering temperature and aging
         
         Q_eff = Q_nominal * f_age(cycles) * f_temp(T)
+        
+        Note: This returns charge capacity in mAh. For SOC calculations, 
+        use get_effective_energy_capacity() which returns energy in Wh.
         
         Temperature effects are moderated by smartphone thermal management:
         - Cold: ~15% reduction at -10°C (vs 35% for bare cells)
@@ -183,6 +189,31 @@ class SmartphoneBatteryModel:
             f_temp = max(0.9, 1 - self.battery.T_coeff_high * T_diff)
         
         return self.battery.nominal_capacity * f_age * f_temp
+    
+    def get_effective_energy_capacity(self, temperature: float) -> float:
+        """
+        Calculate effective energy capacity (Wh) for SOC calculations
+        
+        Per problem statement: SOC = E_remaining / E_total (energy ratio)
+        
+        E_eff = V_nominal × Q_eff / 1000
+        
+        Uses nominal voltage (V_nominal) to convert charge (mAh) to energy (Wh),
+        ensuring consistent energy-based SOC definition.
+        
+        Parameters:
+        -----------
+        temperature : float
+            Battery temperature in °C
+            
+        Returns:
+        --------
+        float : Effective energy capacity in Wh
+        """
+        Q_eff_mAh = self.get_effective_capacity(temperature)
+        # Convert mAh to Wh using nominal voltage
+        # E = V_nominal × Q (energy = voltage × charge)
+        return self.battery.V_nominal * Q_eff_mAh / 1000.0
     
     def calculate_thermal_throttling_factor(self, usage: UsageParameters, 
                                             duration_hours: float = 0.0) -> float:
@@ -280,12 +311,19 @@ class SmartphoneBatteryModel:
     def soc_derivative(self, t: float, SOC: float, 
                        usage_func: Callable[[float], UsageParameters] = None) -> float:
         """
-        Calculate the rate of change of SOC
+        Calculate the rate of change of SOC (energy-based)
         
-        dSOC/dt = -P_total(t) / (V(SOC) * Q_eff) - k_self * SOC
+        Per problem statement: SOC = E_remaining / E_total (energy ratio)
+        
+        dSOC/dt = -P_total(t) / E_eff - k_self * SOC
+        
+        where E_eff = V_nominal × Q_eff is the effective energy capacity (Wh).
+        
+        Note: Using V_nominal (constant) instead of V(SOC) (varying) ensures
+        SOC is consistently defined as energy ratio throughout discharge.
         
         Enhanced with:
-        1. SOC-dependent voltage for more accurate discharge modeling
+        1. Energy-based SOC calculation (V_nominal × Q)
         2. Thermal throttling consideration
         3. BMS power limiting
         """
@@ -298,15 +336,12 @@ class SmartphoneBatteryModel:
         # Calculate power consumption with thermal throttling (convert mW to W)
         P_total = self.calculate_power_consumption(current_usage, duration_hours=t) / 1000.0
         
-        # Get effective capacity (convert mAh to Ah)
-        Q_eff = self.get_effective_capacity(current_usage.temperature) / 1000.0
+        # Get effective energy capacity in Wh (uses V_nominal for energy-based SOC)
+        E_eff = self.get_effective_energy_capacity(current_usage.temperature)
         
-        # Get SOC-dependent voltage (non-linear)
-        V_current = self.get_voltage(SOC)
-        
-        # Calculate discharge rate using actual voltage
-        # dSOC/dt = -I/Q = -P/(V*Q)
-        discharge_rate = -P_total / (V_current * Q_eff)
+        # Calculate discharge rate using energy-based formula
+        # dSOC/dt = -P_total / E_eff (Power / Energy = 1/Time)
+        discharge_rate = -P_total / E_eff
         
         # Add self-discharge (very small, but included for completeness)
         self_discharge = -self.battery.self_discharge_rate * SOC

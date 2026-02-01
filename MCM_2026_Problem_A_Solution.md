@@ -21,10 +21,10 @@ This paper presents a **data-driven continuous-time mathematical model** for pre
 - Display power increases **~3.3× from low to max brightness** (non-linear relationship confirmed)
 - CPU power scales with frequency^1.45, consistent with DVFS behavior
 
-**Model Equation:**
-$$\frac{dSOC}{dt} = -\frac{P_{total}(t)}{V(SOC) \cdot Q_{effective}(T, n)} - k_{self} \cdot SOC$$
+**Model Equation (Energy-Based SOC):**
+$$\frac{dSOC}{dt} = -\frac{P_{total}(t)}{E_{effective}(T, n)} - k_{self} \cdot SOC$$
 
-where V(SOC) = V_min + (V_max - V_min) × SOC^α captures the non-linear voltage characteristic.
+where $E_{effective} = V_{nominal} \cdot Q_{effective}$ is the energy capacity (Wh), ensuring SOC is defined as an energy ratio (能量比值，不是电荷比值).
 
 **Keywords:** Lithium-ion battery, State of charge, Continuous-time model, Power consumption, Smartphone, Data-driven modeling, AndroWatts, Battery aging
 
@@ -284,17 +284,17 @@ Figure 1 illustrates our model architecture, showing how data-driven inputs (And
 
 ## 4.1 Battery Fundamentals
 
-The state of charge (SOC) represents the remaining energy in the battery as a fraction of its full capacity:
+The state of charge (SOC) represents the remaining **energy** in the battery as a fraction of its full **energy** capacity (能量比值，不是电荷比值):
 
-$$SOC = \frac{Q_{remaining}}{Q_{total}}$$
+$$SOC = \frac{E_{remaining}}{E_{total}}$$
 
-The fundamental discharge equation follows from Coulomb counting:
+where $E_{total} = V_{nominal} \cdot Q_{total}$ is the total energy capacity (Wh).
 
-$$\frac{dSOC}{dt} = -\frac{I(t)}{Q_{total}}$$
+The fundamental discharge equation for energy-based SOC:
 
-Using the power-current relationship $P = V \cdot I$:
+$$\frac{dSOC}{dt} = -\frac{P(t)}{E_{total}} = -\frac{P(t)}{V_{nominal} \cdot Q_{total}}$$
 
-$$\frac{dSOC}{dt} = -\frac{P(t)}{V(SOC) \cdot Q_{total}}$$
+**Important**: Using nominal voltage $V_{nominal}$ (constant) instead of $V(SOC)$ (varying) ensures SOC is consistently defined as an energy ratio throughout discharge. The open-circuit voltage $V(SOC)$ is used for terminal voltage calculations, but not for SOC definition.
 
 ## 4.2 SOC-Dependent Voltage Model
 
@@ -307,7 +307,7 @@ where:
 - $V_{min} = 3.0V$ (BMS cutoff voltage)
 - $\alpha = 0.85$ (non-linearity factor)
 
-This captures the steeper voltage drop at low SOC, which is important for accurate discharge modeling near empty.
+This captures the steeper voltage drop at low SOC, which is important for accurate open-circuit voltage (OCV) modeling. Note that $V(SOC)$ is used for voltage display and OCV calculations, while $V_{nominal}$ is used for energy-based SOC calculations.
 
 | SOC (%) | Voltage (V) | Notes |
 |---------|-------------|-------|
@@ -505,15 +505,19 @@ The 80% floor represents the typical battery replacement threshold.
 
 ## 4.6 Complete Governing Equations
 
-The complete continuous-time model is:
+The complete continuous-time model uses **energy-based SOC** (能量比值):
 
-$$\boxed{\frac{dSOC}{dt} = -\frac{P_{total}(t, SOC, T)}{V(SOC) \cdot Q_{effective}(T, n)} - k_{self} \cdot SOC}$$
+$$\boxed{\frac{dSOC}{dt} = -\frac{P_{total}(t, T)}{E_{effective}(T, n)} - k_{self} \cdot SOC}$$
 
 where:
-- $P_{total}(t, SOC, T)$ = total power with thermal throttling and BMS limiting
-- $V(SOC) = 3.0 + 1.2 \cdot SOC^{0.85}$ (non-linear voltage)
-- $Q_{effective}(T, n) = Q_{nominal} \cdot f_{temp}(T) \cdot f_{age}(n)$
+- $SOC = E_{remaining} / E_{total}$ (energy ratio, not charge ratio)
+- $E_{effective}(T, n) = V_{nominal} \cdot Q_{effective}(T, n)$ (energy capacity in Wh)
+- $P_{total}(t, T)$ = total power with thermal throttling and BMS limiting
+- $Q_{effective}(T, n) = Q_{nominal} \cdot f_{temp}(T) \cdot f_{age}(n)$ (charge capacity)
+- $V_{nominal} = 3.7V$ (nominal voltage for energy calculations)
 - $k_{self} \approx 0.00005$ h⁻¹ (self-discharge rate)
+
+**Note**: The equation uses $V_{nominal}$ (constant) instead of $V(SOC)$ (varying) to ensure SOC is consistently defined as an energy ratio throughout the discharge process.
 
 **BMS Constraints:**
 - Simulation terminates at SOC = 5% (shutdown threshold)
@@ -532,13 +536,17 @@ The model was implemented in Python using the `scipy.integrate.solve_ivp` functi
 
 ```python
 def soc_derivative(t, SOC, usage_func):
+    # Calculate power consumption (W)
     P_total = calculate_power_consumption(usage_func(t), duration=t)
-    Q_eff = get_effective_capacity(temperature, cycles)
-    V_current = get_voltage(SOC)  # Non-linear V(SOC)
-    discharge_rate = -P_total / (V_current * Q_eff)
+    # Get effective energy capacity (Wh) using V_nominal for energy-based SOC
+    E_eff = get_effective_energy_capacity(temperature, cycles)  # V_nominal * Q_eff
+    # Energy-based discharge rate: dSOC/dt = -P/E
+    discharge_rate = -P_total / E_eff
     self_discharge = -k_self * SOC
     return discharge_rate + self_discharge
 ```
+
+**Note**: The formula uses energy capacity $E_{eff} = V_{nominal} \cdot Q_{eff}$ (Wh) instead of $V(SOC) \cdot Q_{eff}$ to ensure SOC is consistently defined as an energy ratio (能量比值).
 
 ## 5.2 Primary Data Source: Zenodo Dataset Analysis
 
