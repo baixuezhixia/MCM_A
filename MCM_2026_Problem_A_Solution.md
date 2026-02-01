@@ -9,12 +9,13 @@
 This paper presents a **data-driven continuous-time mathematical model** for predicting smartphone battery state of charge (SOC) and time-to-empty under realistic usage conditions. Our approach combines electrochemical principles of lithium-ion batteries with **empirical power consumption relationships derived from real-world measurements** (AndroWatts dataset [17], 1,000 device tests) and **battery aging data** (Mendeley degradation dataset [18]).
 
 **Key Model Features:**
-1. **Data-driven power relationships**: Component power proportions and brightness-power correlation derived from 1,000 real device measurements
-2. **Empirical brightness-power relationship**: Brightness accounts for ~50% of display power variance ($R^2 = 0.44$), eliminating linear assumptions
-3. **Frequency-power law**: CPU power follows $P_{CPU} \propto f^{1.45}$ (fitted from real data)
-4. **SOC-dependent voltage model** (V(SOC): 4.2V→3.0V) with aging-specific OCV(SOC) polynomials
-5. **Battery Management System (BMS)** constraints: 5% shutdown threshold, power limiting
-6. **Thermal-power feedback loop**: processor throttling under sustained load
+1. **Energy-based SOC definition**: SOC = E_remaining/E_total (能量比值), not charge ratio
+2. **Data-driven power relationships**: Component power proportions and brightness-power correlation derived from 1,000 real device measurements
+3. **Empirical brightness-power relationship**: Brightness accounts for ~50% of display power variance ($R^2 = 0.44$), eliminating linear assumptions
+4. **Frequency-power law**: CPU power follows $P_{CPU} \propto f^{1.45}$ (fitted from real data)
+5. **OCV model for voltage display**: V(SOC): 4.2V→3.0V with aging-specific OCV(SOC) polynomials (for terminal voltage, not SOC calculation)
+6. **Battery Management System (BMS)** constraints: 5% shutdown threshold, power limiting
+7. **Thermal-power feedback loop**: processor throttling under sustained load
 
 **Data-Driven Findings (from AndroWatts):**
 - CPU is the dominant power consumer (**42.4%** of total), followed by Display (**11.8%**) and Network (**9.2%**)
@@ -137,7 +138,7 @@ Each assumption is justified through either (1) **empirical data from the AndroW
 
 | Assumption | Justification Source |
 |------------|---------------------|
-| **A1**: Battery voltage varies with SOC following a polynomial relationship | Parameter estimation from NASA discharge data [8]; validated against published OCV curves [9] |
+| **A1**: Open-circuit voltage (OCV) varies with SOC following a polynomial relationship (for voltage display, not SOC calculation) | Parameter estimation from NASA discharge data [8]; validated against published OCV curves [9] |
 | **A2**: BMS triggers shutdown at 5% SOC | Apple iPhone technical specification [6]; Samsung Galaxy specifications [10] |
 | **A3**: Thermal throttling reduces processor power by up to 40% under sustained load | Measured data from AnandTech benchmark studies [11]; Qualcomm Snapdragon thermal specifications [12] |
 | **A4**: Capacity fade is 0.08% per cycle for smartphones | Derived from Apple Battery Health reports: 80% capacity at 500 cycles [6]; cross-validated with independent degradation studies [13] |
@@ -147,13 +148,20 @@ Each assumption is justified through either (1) **empirical data from the AndroW
 
 ## 3.1 Detailed Assumption Derivations and Validation
 
-### A1: SOC-Dependent Voltage Model
+### A1: Open-Circuit Voltage (OCV) Model
+
+**Purpose Clarification**: The V(SOC) model describes the **open-circuit voltage (OCV)** as a function of SOC. This is used for:
+1. Terminal voltage display (what users see on their phone)
+2. Battery health monitoring and BMS operations
+3. Understanding voltage drop behavior at different SOC levels
+
+**Note**: V(SOC) is **NOT** used for SOC calculation. Per the problem statement, SOC is defined as an energy ratio (能量比值), so SOC calculations use the constant nominal voltage $V_{nominal} = 3.7V$ (see Section 4.1).
 
 **Background**: Plett [1] (Chapter 2, Sections 2.1-2.2) establishes that open-circuit voltage (OCV) is a function of SOC but emphasizes that the specific relationship must be determined experimentally (Section 2.10). The reference explicitly notes that hysteresis effects (Section 2.7) influence this relationship.
 
 **Parameter Estimation Method**: We fitted a polynomial model to NASA Prognostics discharge data [8] using least-squares regression on Battery B0005-B0007 discharge curves:
 
-$$V(SOC) = V_{min} + (V_{max} - V_{min}) \cdot SOC^{\alpha}$$
+$$V_{OCV}(SOC) = V_{min} + (V_{max} - V_{min}) \cdot SOC^{\alpha}$$
 
 **Estimated Parameters from NASA Data**:
 - $V_{max} = 4.2V$ (standard Li-ion charge termination voltage, per manufacturer specifications)
@@ -168,7 +176,7 @@ $$V(SOC) = V_{min} + (V_{max} - V_{min}) \cdot SOC^{\alpha}$$
 | 50% | 3.56V | 3.50-3.60V | Within range |
 | 20% | 3.26V | 3.20-3.35V | Within range |
 
-**Feasibility**: The power-function form captures the characteristic steep voltage drop at low SOC observed in Li-ion batteries, while being computationally efficient for continuous-time modeling.
+**Feasibility**: The power-function form captures the characteristic steep voltage drop at low SOC observed in Li-ion batteries, while being computationally efficient for OCV modeling.
 
 ### A2: BMS Shutdown Threshold at 5% SOC
 
@@ -296,21 +304,26 @@ $$\frac{dSOC}{dt} = -\frac{P(t)}{E_{total}} = -\frac{P(t)}{V_{nominal} \cdot Q_{
 
 **Important**: Using nominal voltage $V_{nominal}$ (constant) instead of $V(SOC)$ (varying) ensures SOC is consistently defined as an energy ratio throughout discharge. The open-circuit voltage $V(SOC)$ is used for terminal voltage calculations, but not for SOC definition.
 
-## 4.2 SOC-Dependent Voltage Model
+## 4.2 Open-Circuit Voltage (OCV) Model
 
-**Key improvement over previous models**: Real Li-ion batteries have a non-linear voltage-SOC relationship, not constant voltage.
+**Purpose**: This model describes the open-circuit voltage (OCV) as a function of SOC, used for:
+- Terminal voltage display to users
+- BMS monitoring and shutdown decisions
+- Battery health diagnostics
 
-$$V(SOC) = V_{min} + (V_{max} - V_{min}) \cdot SOC^{\alpha}$$
+**Note**: OCV V(SOC) is NOT used in SOC calculation. The energy-based SOC formula uses constant $V_{nominal}$ (see Section 4.1).
+
+$$V_{OCV}(SOC) = V_{min} + (V_{max} - V_{min}) \cdot SOC^{\alpha}$$
 
 where:
 - $V_{max} = 4.2V$ (fully charged)
 - $V_{min} = 3.0V$ (BMS cutoff voltage)
 - $\alpha = 0.85$ (non-linearity factor)
 
-This captures the steeper voltage drop at low SOC, which is important for accurate open-circuit voltage (OCV) modeling. Note that $V(SOC)$ is used for voltage display and OCV calculations, while $V_{nominal}$ is used for energy-based SOC calculations.
+This captures the steeper voltage drop at low SOC, which is important for accurate terminal voltage display and BMS operations.
 
-| SOC (%) | Voltage (V) | Notes |
-|---------|-------------|-------|
+| SOC (%) | OCV (V) | Notes |
+|---------|---------|-------|
 | 100 | 4.2 | Fully charged |
 | 80 | 4.0 | Still "full" indicator |
 | 50 | 3.6 | Mid-range |
@@ -675,20 +688,17 @@ Six representative usage scenarios with predictions **generated by `run_mcm_anal
 
 ![Discharge Curves](pictures/mcm_discharge_curves.png)
 
-The discharge curves (generated from `run_mcm_analysis.py`) are **quasi-linear**, which is the correct physical behavior based on the Zenodo dataset's OCV polynomial.
+The discharge curves (generated from `run_mcm_analysis.py`) are **quasi-linear**, which is the correct physical behavior for energy-based SOC.
 
 ### Why Discharge Curves Are Nearly Linear
 
-The Zenodo/Mendeley OCV polynomial shows that Li-ion battery voltage changes only **~16.5%** across the full SOC range (100%→10%):
+With energy-based SOC definition ($SOC = E_{remaining}/E_{total}$), the discharge rate is:
 
-| SOC | OCV (V) | Change from 100% |
-|-----|---------|------------------|
-| 100% | 4.21 | - |
-| 50% | 3.76 | -11% |
-| 20% | 3.59 | -15% |
-| 10% | 3.52 | -16.5% |
+$$\frac{dSOC}{dt} = -\frac{P}{E_{total}} = -\frac{P}{V_{nominal} \cdot Q_{total}}$$
 
-Since discharge rate is $\frac{dSOC}{dt} = -\frac{P}{V(SOC) \cdot Q}$, a 16.5% voltage variation produces only ~20% variation in discharge rate. This results in **quasi-linear discharge curves**, which is physically correct.
+Since both $V_{nominal}$ (constant) and $Q_{total}$ (constant for a given battery state) are constant during discharge, and power consumption P remains approximately constant for a fixed usage scenario, the discharge rate is **constant**. This results in **linear discharge curves**, which is physically correct for energy-based SOC.
+
+**Note**: The OCV (Open-Circuit Voltage) still varies with SOC (see Section 4.2), but this does not affect the SOC calculation. The OCV is only used for terminal voltage display and BMS operations.
 
 ### Model Scope and Applicability
 
