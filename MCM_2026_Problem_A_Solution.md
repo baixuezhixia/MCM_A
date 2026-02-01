@@ -966,13 +966,13 @@ To extend battery lifespan:
 
 | Aspect | Previous Model | Current Model (Data-Driven) |
 |--------|---------------|---------------|
-| SOC definition | Charge ratio (Q/Q_total) | **Energy ratio (E/E_total)** |
+| SOC definition | Implicit charge ratio | **Energy ratio: SOC = E/E_total** |
 | Power parameters | Linear assumptions | Empirical from AndroWatts |
 | Brightness model | Linear: $P \propto B$ | Non-linear: ~3.3× increase low→max |
 | CPU model | Fixed values | $P \propto f^{1.45}$ (fitted) |
 | Component breakdown | Estimated (CPU 70%) | Measured: CPU 42.4%, Display 11.8% |
-| SOC calculation | Uses V(SOC) × Q | **Uses V_nominal × Q (energy-based)** |
-| OCV model | Generic curve | Aging-specific polynomials (for display) |
+| SOC calculation | dSOC/dt = -P/(V(SOC)×Q) | **dSOC/dt = -P/(V_nominal×Q), V_nominal=3.7V** |
+| OCV model | Generic curve | Aging-specific polynomials (for display only) |
 | Capacity fade | 0.29%/cycle (NASA) | 0.08%/cycle (cross-validated) |
 | Shutdown SOC | 0% (1%) | 5% (BMS) |
 
@@ -984,7 +984,7 @@ We developed a **data-driven continuous-time mathematical model** for smartphone
 
 **Key features:**
 
-1. **Energy-based SOC definition**: SOC = E_remaining/E_total using V_nominal (constant)
+1. **Energy-based SOC definition**: SOC = E_remaining/E_total using V_nominal = 3.7V (constant)
 2. **Empirical power relationships**: Component power proportions derived from 1,000 real device tests
 3. **Non-linear brightness-power relationship**: Display power increases ~3.3× from minimum to maximum brightness
 4. **Frequency-power law**: CPU power scales as $f^{1.45}$
@@ -1141,15 +1141,15 @@ The model parameters are derived from two real-world datasets located in `reques
 
 | Issue | Previous Model | Current Model (Data-Driven) |
 |-------|---------------|---------------|
-| SOC definition | Charge ratio (Q/Q_total) | **Energy ratio (E/E_total)** |
+| SOC definition | Implicit charge ratio | **Energy ratio: SOC = E/E_total** |
 | Data utilization | Subset analysis | **Full 36,000 rows for aging analysis** |
 | Power model source | Linear assumptions | AndroWatts dataset (1,000 tests) |
 | Brightness-power | Linear: $P \propto B$ | Empirical: $P = 117.35B + 3018$ |
 | CPU-frequency | Assumed | Fitted: $P \propto f^{1.45}$ |
 | Component breakdown | Estimated (CPU 70%) | Measured: CPU 42.4%, Display 11.8% |
 | Battery life analysis | Theoretical | **Empirical: 36,000 samples** |
-| SOC calculation | V(SOC) × Q (varying) | **V_nominal × Q (constant, energy-based)** |
-| OCV(SOC) curve | Generic | Aging-specific (for display only) |
+| SOC calculation | dSOC/dt = -P/(V(SOC)×Q) | **dSOC/dt = -P/(V_nominal×Q), V_nominal=3.7V** |
+| OCV(SOC) curve | Generic | Aging-specific (for voltage display only) |
 | Capacity fade | 0.29%/cycle (NASA 1C) | 0.08%/cycle (cross-validated) |
 | BMS shutdown | 0% or 1% | 5% (realistic) |
 | Thermal feedback | None | Throttling at 70%+ load |
