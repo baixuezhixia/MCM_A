@@ -14,7 +14,8 @@
       "shutdown_soc": 0.05,
       "max_discharge_power_w": 15.0,
       "V_max": 4.2,
-      "V_min": 3.0
+      "V_min": 3.0,
+      "V_nominal": 3.7
     },
     "power": {
       "cpu_pct": 42.4,
@@ -43,15 +44,16 @@
     "secondary": "NASA Battery Data Set"
   },
   "r1_model": {
-    "equation": "dSOC/dt = -P_total(t) / (V(SOC) * Q_eff) - k_self * SOC",
-    "voltage_model": "OCV polynomial from Zenodo (c0-c5)",
+    "equation": "dSOC/dt = -P_total(t) / E_eff - k_self * SOC",
+    "soc_definition": "SOC = E_remaining / E_total (energy ratio)",
+    "energy_model": "E_eff = V_nominal \u00d7 Q_eff (V_nominal = 3.7V)",
     "power_model": "Zenodo brightness-power and CPU-frequency models",
     "data_source": "Zenodo dataset (1,000 unique tests)"
   },
   "r2_time_to_empty": {
     "idle": {
       "power_mw": 334.056907931643,
-      "time_to_empty_hours": 48.58908100920457,
+      "time_to_empty_hours": 47.288083605423886,
       "in_zenodo_range": "True",
       "params": {
         "brightness": 0.0,
@@ -65,7 +67,7 @@
     },
     "light": {
       "power_mw": 894.2651491393381,
-      "time_to_empty_hours": 18.160686245395514,
+      "time_to_empty_hours": 17.68088926148733,
       "in_zenodo_range": "True",
       "params": {
         "brightness": 0.3,
@@ -79,7 +81,7 @@
     },
     "moderate": {
       "power_mw": 1598.4855005647032,
-      "time_to_empty_hours": 10.157077271142219,
+      "time_to_empty_hours": 9.893865391551069,
       "in_zenodo_range": "True",
       "params": {
         "brightness": 0.5,
@@ -93,7 +95,7 @@
     },
     "heavy": {
       "power_mw": 2696.6272261652266,
-      "time_to_empty_hours": 6.020628707732366,
+      "time_to_empty_hours": 5.866143035991096,
       "in_zenodo_range": "True",
       "params": {
         "brightness": 0.7,
@@ -107,7 +109,7 @@
     },
     "navigation": {
       "power_mw": 2482.437487027386,
-      "time_to_empty_hours": 6.5394082500590205,
+      "time_to_empty_hours": 6.369761539263463,
       "in_zenodo_range": "True",
       "params": {
         "brightness": 0.8,
@@ -121,7 +123,7 @@
     },
     "gaming": {
       "power_mw": 3669.7876751688955,
-      "time_to_empty_hours": 4.42508407162211,
+      "time_to_empty_hours": 4.3088394668313885,
       "in_zenodo_range": "True",
       "params": {
         "brightness": 0.9,
@@ -145,146 +147,146 @@
       {
         "brightness": 0.1,
         "power_mw": 1303.7812993113143,
-        "time_hours": 12.46070909641201,
-        "pct_change": 18.070671019152552
+        "time_hours": 12.126269243516893,
+        "pct_change": 17.992566373495634
       },
       {
         "brightness": 0.3,
         "power_mw": 1421.1333999380088,
-        "time_hours": 11.423827106956793,
-        "pct_change": 8.245760469085777
+        "time_hours": 11.124989648959215,
+        "pct_change": 8.249788389043646
       },
       {
         "brightness": 0.5,
         "power_mw": 1538.4855005647032,
-        "time_hours": 10.553602337358383,
+        "time_hours": 10.277146786630777,
         "pct_change": 0.0
       },
       {
         "brightness": 0.7,
         "power_mw": 1655.8376011913974,
-        "time_hours": 9.808547330804323,
-        "pct_change": -7.0597221947302415
+        "time_hours": 9.551572547338143,
+        "pct_change": -7.060074691513707
       },
       {
         "brightness": 0.9,
         "power_mw": 1773.189701818092,
-        "time_hours": 9.156681340067163,
-        "pct_change": -13.236437688639272
+        "time_hours": 8.91632317451999,
+        "pct_change": -13.241258885988087
       },
       {
         "brightness": 1.0,
         "power_mw": 1831.8657521314392,
-        "time_hours": 8.864584273876567,
-        "pct_change": -16.004185201321366
+        "time_hours": 8.62938895434489,
+        "pct_change": -16.033222707584603
       }
     ],
     "cpu_sensitivity": [
       {
         "cpu_load": 0.1,
         "power_mw": 914.8748592746801,
-        "time_hours": 17.74346651994285,
-        "pct_change": 68.12710914010167
+        "time_hours": 17.28002383148605,
+        "pct_change": 68.1402843634101
       },
       {
         "cpu_load": 0.3,
         "power_mw": 1389.173558239423,
-        "time_hours": 11.686441696146934,
-        "pct_change": 10.734148611782038
+        "time_hours": 11.381203448500791,
+        "pct_change": 10.742832468893488
       },
       {
         "cpu_load": 0.5,
         "power_mw": 2043.7308486906854,
-        "time_hours": 7.944613652251509,
-        "pct_change": -24.72130938524557
+        "time_hours": 7.73482645749025,
+        "pct_change": -24.737608423066924
       },
       {
         "cpu_load": 0.7,
         "power_mw": 2831.320952136603,
-        "time_hours": 5.732717969689952,
-        "pct_change": -45.67998881863423
+        "time_hours": 5.585459021082343,
+        "pct_change": -45.65165666069599
       },
       {
         "cpu_load": 0.9,
         "power_mw": 3728.9163264618956,
-        "time_hours": 4.355370094954575,
-        "pct_change": -58.730962606605615
+        "time_hours": 4.240814742855925,
+        "pct_change": -58.73548533555374
       }
     ],
     "aging_sensitivity": [
       {
         "state": "new",
         "soh": 1.0,
-        "model_time_hours": 10.553602337358383,
+        "model_time_hours": 10.277146786630777,
         "zenodo_time_hours": 14.183082365267715,
-        "error_pct": -25.59020623610983
+        "error_pct": -27.539398545706828
       },
       {
         "state": "slight",
         "soh": 0.9499190183117884,
-        "model_time_hours": 10.024340034292122,
+        "model_time_hours": 9.76328076073925,
         "zenodo_time_hours": 13.471707414841758,
-        "error_pct": -25.589684175828204
+        "error_pct": -27.52751778157638
       },
       {
         "state": "moderate",
         "soh": 0.9000284662491005,
-        "model_time_hours": 9.498645835300083,
+        "model_time_hours": 9.253539086021002,
         "zenodo_time_hours": 12.764577296743116,
-        "error_pct": -25.58589591741778
+        "error_pct": -27.506106384094338
       },
       {
         "state": "aged",
         "soh": 0.85044423929599,
-        "model_time_hours": 8.975119650823357,
+        "model_time_hours": 8.738959262373745,
         "zenodo_time_hours": 12.069170579924515,
-        "error_pct": -25.63598640529372
+        "error_pct": -27.592710663068598
       },
       {
         "state": "old",
         "soh": 0.800016359403547,
-        "model_time_hours": 8.4424517930191,
+        "model_time_hours": 8.221351258813778,
         "zenodo_time_hours": 11.346931483315615,
-        "error_pct": -25.59704969195615
+        "error_pct": -27.54559881759796
       },
       {
         "state": "eol",
         "soh": 0.7020066278088006,
-        "model_time_hours": 7.409216809095369,
+        "model_time_hours": 7.21448552685851,
         "zenodo_time_hours": 10.765552083354047,
-        "error_pct": -31.176620095947733
+        "error_pct": -32.98545702998623
       }
     ],
     "temperature_sensitivity": [
       {
         "temperature_c": -10,
-        "time_hours": 7.914837045622907,
-        "pct_change": -25.003455762158
+        "time_hours": 7.708597630518687,
+        "pct_change": -24.99282348923376
       },
       {
         "temperature_c": 0,
-        "time_hours": 8.442221987435692,
-        "pct_change": -20.006252674962727
+        "time_hours": 8.2211715585699,
+        "pct_change": -20.005311500809075
       },
       {
         "temperature_c": 15,
-        "time_hours": 9.709530348563451,
-        "pct_change": -7.997951427514247
+        "time_hours": 9.455176063622929,
+        "pct_change": -7.998044010397167
       },
       {
         "temperature_c": 25,
-        "time_hours": 10.553602337358383,
+        "time_hours": 10.277146786630777,
         "pct_change": 0.0
       },
       {
         "temperature_c": 35,
-        "time_hours": 10.341363211985163,
-        "pct_change": -2.0110585806508996
+        "time_hours": 10.07231634779839,
+        "pct_change": -1.9930671720953166
       },
       {
         "temperature_c": 45,
-        "time_hours": 10.129200870718442,
-        "pct_change": -4.021389598294929
+        "time_hours": 9.867344902343339,
+        "pct_change": -3.987506384753952
       }
     ]
   },
@@ -339,10 +341,10 @@
     ],
     "optimization_impact": {
       "baseline_power_mw": 2598.6514292735383,
-      "baseline_time_h": 6.250294754102785,
+      "baseline_time_h": 6.0849560347634455,
       "optimized_power_mw": 947.017522065282,
-      "optimized_time_h": 17.140845864618367,
-      "improvement_pct": 174.2406004671518
+      "optimized_time_h": 16.692895574184938,
+      "improvement_pct": 174.33058643017588
     }
   }
 }
