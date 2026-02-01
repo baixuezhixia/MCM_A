@@ -11,15 +11,15 @@ This paper presents a **data-driven continuous-time mathematical model** for pre
 **Key Model Features:**
 1. **Energy-based SOC definition**: SOC = E_remaining/E_total (能量比值), not charge ratio
 2. **Data-driven power relationships**: Component power proportions and brightness-power correlation derived from 1,000 real device measurements
-3. **Empirical brightness-power relationship**: Brightness accounts for ~50% of display power variance ($R^2 = 0.44$), eliminating linear assumptions
-4. **Frequency-power law**: CPU power follows $P_{CPU} \propto f^{1.45}$ (fitted from real data)
+3. **Empirical brightness-power relationship**: Linear fit with $R^2 = 0.44$, showing brightness explains ~44% of display power variance; remaining variance due to content, display technology, etc.
+4. **Frequency-power law**: CPU power follows $P_{CPU} \propto f^{1.45}$ (fitted from real data, consistent with DVFS behavior)
 5. **OCV model for voltage display**: V(SOC): 4.2V→3.0V with aging-specific OCV(SOC) polynomials (for terminal voltage, not SOC calculation)
 6. **Battery Management System (BMS)** constraints: 5% shutdown threshold, power limiting
 7. **Thermal-power feedback loop**: processor throttling under sustained load
 
 **Data-Driven Findings (from AndroWatts):**
 - CPU is the dominant power consumer (**42.4%** of total), followed by Display (**11.8%**) and Network (**9.2%**)
-- Display power increases **~3.3× from low to max brightness** (non-linear relationship confirmed)
+- Display power increases **~3.3× from low to max brightness** (linear relationship, significant variance)
 - CPU power scales with frequency^1.45, consistent with DVFS behavior
 
 **Model Equation (Energy-Based SOC):**
@@ -58,12 +58,12 @@ where $E_{effective} = V_{nominal} \cdot Q_{effective}$ is the energy capacity (
 
 Smartphones have become indispensable tools in modern life, yet their battery behavior often appears unpredictable. Users frequently experience vastly different battery lifespans from day to day, even with seemingly similar usage patterns. This variability stems from the complex interplay between multiple power-consuming components—screen, processor, network interfaces, sensors—and environmental factors such as temperature.
 
-A key limitation of previous battery models is the assumption of constant discharge conditions and **linear approximations for component power** (e.g., assuming screen power scales linearly with brightness), which do not reflect smartphone reality where:
+A key limitation of previous battery models is the assumption of constant discharge conditions and **idealized component power models** (e.g., ignoring measurement variance in brightness-power relationship), which do not reflect smartphone reality where:
 - **Power consumption varies dynamically** with usage (0.2-1.5C discharge rate vs. constant 1C in lab tests)
-- **Component power relationships are non-linear** (brightness-display power, frequency-CPU power)
+- **Component power has significant variance** (e.g., brightness explains only ~44% of display power; remaining variance from content, technology)
 - **Thermal throttling** reduces processor power when the phone heats up
 - **Battery Management Systems (BMS)** enforce shutdown at ~5% SOC, not 0%
-- **Voltage drops non-linearly** with SOC, affecting discharge dynamics
+- **Voltage drops non-linearly** with SOC, affecting OCV readings
 
 This paper develops a **data-driven continuous-time mathematical model** for smartphone battery state of charge (SOC) that addresses these limitations by leveraging two real-world datasets:
 
@@ -71,8 +71,8 @@ This paper develops a **data-driven continuous-time mathematical model** for sma
 2. **Mendeley Battery Degradation Dataset** [18]: Lithium-ion battery cycling data with OCV(SOC) curves at different aging states
 
 **Our contributions:**
-1. Derives **empirical power models** from real measurements, eliminating linear approximations
-2. Provides **data-driven brightness-power relationship**: $P_{display} = 117.35B + 3018$ (mW)
+1. Derives **empirical power models** from real measurements with quantified uncertainty ($R^2$ values)
+2. Provides **data-driven brightness-power relationship**: $P_{display} \propto B$ with $R^2 = 0.44$
 3. Quantifies **actual component power breakdown**: CPU (42.4%), Display (11.8%), Network (9.2%)
 4. Incorporates **aging-specific OCV(SOC) polynomials** from measured degradation data
 5. Includes **BMS constraints** and **thermal throttling** for realistic behavior
@@ -95,10 +95,13 @@ The MCM Problem A requires us to address **four specific requirements**:
 
 We have access to **two primary datasets**, each serving distinct purposes:
 
-### Zenodo Dataset (Primary for R1, R2, R4)
+### AndroWatts + Mendeley Combined Dataset (Primary for R1, R2, R4)
 - **Location**: `requests/Zenodo Data Set/`
 - **Content**: 36,000 rows = 1,000 smartphone usage tests × 36 battery aging states
-- **Provides**: Real-world power consumption measurements (CPU, Display, Network, etc.), device state (brightness, frequency, temperature), battery aging parameters (SOH, OCV coefficients), and calculated time-to-empty values
+- **Sources**:
+  - **AndroWatts [17]** (hosted on Zenodo): Real-world smartphone power consumption measurements
+  - **Mendeley Battery Degradation [18]**: Battery aging parameters (SOH, OCV coefficients)
+- **Provides**: Per-component power measurements (CPU, Display, Network, etc.), device state (brightness, frequency, temperature), battery aging parameters, and calculated time-to-empty values
 
 ### NASA Battery Data Set (Secondary, for R3 validation)
 - **Location**: `requests/5. Battery Data Set/`
@@ -109,12 +112,12 @@ We have access to **two primary datasets**, each serving distinct purposes:
 
 | Requirement | Primary Dataset | Secondary Dataset | Rationale |
 |-------------|-----------------|-------------------|-----------|
-| **R1: Model** | **Zenodo** | NASA (adapted) | Model parameters from real smartphone measurements |
-| **R2: Predictions** | **Zenodo** | - | 36,000 samples provide direct validation |
-| **R3: Sensitivity** | Zenodo + NASA | - | Zenodo for power, NASA for aging baseline |
-| **R4: Recommendations** | **Zenodo** | - | Component power breakdown guides advice |
+| **R1: Model** | **AndroWatts [17]** | NASA (adapted) | Model parameters from real smartphone measurements |
+| **R2: Predictions** | **AndroWatts + Mendeley** | - | 36,000 samples provide direct validation |
+| **R3: Sensitivity** | AndroWatts + NASA | - | AndroWatts for power, NASA for aging baseline |
+| **R4: Recommendations** | **AndroWatts [17]** | - | Component power breakdown guides advice |
 
-**Critical insight**: NASA data uses constant-current discharge (lab conditions), while Zenodo uses variable-power discharge (real smartphone usage). Parameters from NASA must be **adapted** (e.g., 0.29%/cycle → 0.08%/cycle capacity fade) before application to smartphone models.
+**Critical insight**: NASA data uses constant-current discharge (lab conditions), while AndroWatts uses variable-power discharge (real smartphone usage). Parameters from NASA must be **adapted** (e.g., 0.29%/cycle → 0.08%/cycle capacity fade) before application to smartphone models.
 
 ## 2.2 Model Requirements
 
@@ -122,13 +125,13 @@ Our continuous-time model must:
 
 1. **Be continuous-time**: Use differential equations, not discrete time-step simulations
 2. **Account for multiple power consumers**: Screen, processor, network, GPS, and other components
-3. **Use data-driven parameters**: Derive component power from Zenodo measurements
+3. **Use data-driven parameters**: Derive component power from AndroWatts measurements
 4. **Include environmental effects**: Temperature impacts moderated by thermal management
-5. **Consider battery aging**: Capacity fade with aging-specific OCV curves from Mendeley data
-6. **Predict time-to-empty**: Validated against Zenodo's 36,000 usage scenarios
+5. **Consider battery aging**: Capacity fade with aging-specific OCV curves from Mendeley data [18]
+6. **Predict time-to-empty**: Validated against the combined dataset's 36,000 usage scenarios
 7. **Model BMS behavior**: Shutdown threshold, power limiting, thermal throttling
 
-The key output is SOC(t), from which we derive time-to-empty predictions matching real-world smartphone behavior (validated against Zenodo dataset).
+The key output is SOC(t), from which we derive time-to-empty predictions matching real-world smartphone behavior (validated against AndroWatts + Mendeley data).
 
 ---
 
@@ -332,7 +335,7 @@ This captures the steeper voltage drop at low SOC, which is important for accura
 
 ## 4.3 Power Consumption Model (Data-Driven)
 
-**Data Source**: Our power consumption parameters are derived from the **AndroWatts dataset** [17], which contains 1,000 real-world smartphone usage tests with fine-grained power measurements from perfetto traces. This eliminates the need for linear approximations used in previous studies.
+**Data Source**: Our power consumption parameters are derived from the **AndroWatts dataset** [17], which contains 1,000 real-world smartphone usage tests with fine-grained power measurements from perfetto traces. This provides empirical data with quantified uncertainty ($R^2$ values) rather than idealized assumptions.
 
 **Important Note on Power Measurements**: The AndroWatts dataset measures **system-level power at power rail level**, which includes measurement infrastructure overhead. The absolute power values (25-240W range) are higher than typical smartphone power consumption (2-15W) due to:
 1. Test harness and measurement equipment overhead
@@ -380,15 +383,29 @@ The display power increases by approximately **3.3× from lowest to highest brig
 
 From our analysis of the AndroWatts data (see `zenodo_data_analyzer.py`), CPU power follows a **frequency-power law**:
 
-$$P_{CPU} = 22883.25 \cdot f^{1.45} \text{ (raw measurement, mW)}$$
+$$P_{CPU,raw} = 22883.25 \cdot f^{1.45} \text{ (raw measurement, mW)}$$
 
 **Fitted parameters** (from actual data analysis run):
 - Coefficient: **22883.25**
 - Exponent: **1.45**
 - $R^2 = 0.5649$
 
-After scaling to realistic smartphone values:
-$$P_{CPU,scaled} \propto f^{1.45}$$
+**Note on Units and Scaling**: In the raw data, $f$ represents normalized CPU frequency (0 to 1, where 1 = maximum frequency). At full frequency ($f = 1$), the raw power is approximately 22.9 W, which is far higher than typical smartphone SoC power due to measurement harness overhead.
+
+For realistic smartphone modeling, we scale to typical smartphone CPU power ranges (100 mW idle to 4000 mW peak):
+
+$$P_{CPU,scaled} = P_{idle} + (P_{max} - P_{idle}) \cdot f^{1.45}$$
+
+Where:
+- $P_{idle} \approx 100$ mW (CPU in low-power state)
+- $P_{max} \approx 4000$ mW (sustained high load after thermal throttling)
+
+**Example values**:
+| Normalized Frequency ($f$) | Raw Power (W) | Scaled Power (mW) |
+|---------------------------|---------------|-------------------|
+| 0.1 (10%) | 0.8 | ~490 |
+| 0.5 (50%) | 8.4 | ~1300 |
+| 1.0 (100%) | 22.9 | ~4000 |
 
 The exponent of 1.45 is lower than the theoretical CMOS power law ($P \propto f \cdot V^2$) because:
 1. Modern SoCs use aggressive DVFS (Dynamic Voltage and Frequency Scaling)
