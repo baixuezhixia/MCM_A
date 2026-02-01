@@ -9,22 +9,23 @@
 This paper presents a **data-driven continuous-time mathematical model** for predicting smartphone battery state of charge (SOC) and time-to-empty under realistic usage conditions. Our approach combines electrochemical principles of lithium-ion batteries with **empirical power consumption relationships derived from real-world measurements** (AndroWatts dataset [17], 1,000 device tests) and **battery aging data** (Mendeley degradation dataset [18]).
 
 **Key Model Features:**
-1. **Data-driven power relationships**: Component power proportions and brightness-power correlation derived from 1,000 real device measurements
-2. **Empirical brightness-power relationship**: Brightness accounts for ~50% of display power variance ($R^2 = 0.44$), eliminating linear assumptions
-3. **Frequency-power law**: CPU power follows $P_{CPU} \propto f^{1.45}$ (fitted from real data)
-4. **SOC-dependent voltage model** (V(SOC): 4.2V→3.0V) with aging-specific OCV(SOC) polynomials
-5. **Battery Management System (BMS)** constraints: 5% shutdown threshold, power limiting
-6. **Thermal-power feedback loop**: processor throttling under sustained load
+1. **Energy-based SOC definition**: SOC = E_remaining/E_total (能量比值), not charge ratio
+2. **Data-driven power relationships**: Component power proportions and brightness-power correlation derived from 1,000 real device measurements
+3. **Empirical brightness-power relationship**: Linear fit with $R^2 = 0.44$, showing brightness explains ~44% of display power variance; remaining variance due to content, display technology, etc.
+4. **Frequency-power law**: CPU power follows $P_{CPU} \propto f^{1.45}$ (fitted from real data, consistent with DVFS behavior)
+5. **OCV model for voltage display**: V(SOC): 4.2V→3.0V with aging-specific OCV(SOC) polynomials (for terminal voltage, not SOC calculation)
+6. **Battery Management System (BMS)** constraints: 5% shutdown threshold, power limiting
+7. **Thermal-power feedback loop**: processor throttling under sustained load
 
 **Data-Driven Findings (from AndroWatts):**
 - CPU is the dominant power consumer (**42.4%** of total), followed by Display (**11.8%**) and Network (**9.2%**)
-- Display power increases **~3.3× from low to max brightness** (non-linear relationship confirmed)
+- Display power increases **~3.3× from low to max brightness** (linear relationship, significant variance)
 - CPU power scales with frequency^1.45, consistent with DVFS behavior
 
-**Model Equation:**
-$$\frac{dSOC}{dt} = -\frac{P_{total}(t)}{V(SOC) \cdot Q_{effective}(T, n)} - k_{self} \cdot SOC$$
+**Model Equation (Energy-Based SOC):**
+$$\frac{dSOC}{dt} = -\frac{P_{total}(t)}{E_{effective}(T, n)} - k_{self} \cdot SOC$$
 
-where V(SOC) = V_min + (V_max - V_min) × SOC^α captures the non-linear voltage characteristic.
+where $E_{effective} = V_{nominal} \cdot Q_{effective}$ is the energy capacity (Wh), ensuring SOC is defined as an energy ratio (能量比值，不是电荷比值).
 
 **Keywords:** Lithium-ion battery, State of charge, Continuous-time model, Power consumption, Smartphone, Data-driven modeling, AndroWatts, Battery aging
 
@@ -38,7 +39,7 @@ where V(SOC) = V_min + (V_max - V_min) × SOC^α captures the non-linear voltage
    - 3.1 Detailed Assumption Derivations and Validation
 4. [Model Development](#4-model-development)
    - 4.1 Battery Fundamentals
-   - 4.2 SOC-Dependent Voltage Model
+   - 4.2 Open-Circuit Voltage (OCV) Model
    - 4.3 Power Consumption Model (Data-Driven)
    - 4.4 Temperature Effects with Thermal Management
    - 4.5 Battery Aging Model (Data-Driven)
@@ -57,12 +58,12 @@ where V(SOC) = V_min + (V_max - V_min) × SOC^α captures the non-linear voltage
 
 Smartphones have become indispensable tools in modern life, yet their battery behavior often appears unpredictable. Users frequently experience vastly different battery lifespans from day to day, even with seemingly similar usage patterns. This variability stems from the complex interplay between multiple power-consuming components—screen, processor, network interfaces, sensors—and environmental factors such as temperature.
 
-A key limitation of previous battery models is the assumption of constant discharge conditions and **linear approximations for component power** (e.g., assuming screen power scales linearly with brightness), which do not reflect smartphone reality where:
+A key limitation of previous battery models is the assumption of constant discharge conditions and **idealized component power models** (e.g., ignoring measurement variance in brightness-power relationship), which do not reflect smartphone reality where:
 - **Power consumption varies dynamically** with usage (0.2-1.5C discharge rate vs. constant 1C in lab tests)
-- **Component power relationships are non-linear** (brightness-display power, frequency-CPU power)
+- **Component power has significant variance** (e.g., brightness explains only ~44% of display power; remaining variance from content, technology)
 - **Thermal throttling** reduces processor power when the phone heats up
 - **Battery Management Systems (BMS)** enforce shutdown at ~5% SOC, not 0%
-- **Voltage drops non-linearly** with SOC, affecting discharge dynamics
+- **Voltage drops non-linearly** with SOC, affecting OCV readings
 
 This paper develops a **data-driven continuous-time mathematical model** for smartphone battery state of charge (SOC) that addresses these limitations by leveraging two real-world datasets:
 
@@ -70,8 +71,8 @@ This paper develops a **data-driven continuous-time mathematical model** for sma
 2. **Mendeley Battery Degradation Dataset** [18]: Lithium-ion battery cycling data with OCV(SOC) curves at different aging states
 
 **Our contributions:**
-1. Derives **empirical power models** from real measurements, eliminating linear approximations
-2. Provides **data-driven brightness-power relationship**: $P_{display} = 117.35B + 3018$ (mW)
+1. Derives **empirical power models** from real measurements with quantified uncertainty ($R^2$ values)
+2. Provides **data-driven brightness-power relationship**: $P_{display} \propto B$ with $R^2 = 0.44$
 3. Quantifies **actual component power breakdown**: CPU (42.4%), Display (11.8%), Network (9.2%)
 4. Incorporates **aging-specific OCV(SOC) polynomials** from measured degradation data
 5. Includes **BMS constraints** and **thermal throttling** for realistic behavior
@@ -94,10 +95,13 @@ The MCM Problem A requires us to address **four specific requirements**:
 
 We have access to **two primary datasets**, each serving distinct purposes:
 
-### Zenodo Dataset (Primary for R1, R2, R4)
+### AndroWatts + Mendeley Combined Dataset (Primary for R1, R2, R4)
 - **Location**: `requests/Zenodo Data Set/`
 - **Content**: 36,000 rows = 1,000 smartphone usage tests × 36 battery aging states
-- **Provides**: Real-world power consumption measurements (CPU, Display, Network, etc.), device state (brightness, frequency, temperature), battery aging parameters (SOH, OCV coefficients), and calculated time-to-empty values
+- **Sources**:
+  - **AndroWatts [17]** (hosted on Zenodo): Real-world smartphone power consumption measurements
+  - **Mendeley Battery Degradation [18]**: Battery aging parameters (SOH, OCV coefficients)
+- **Provides**: Per-component power measurements (CPU, Display, Network, etc.), device state (brightness, frequency, temperature), battery aging parameters, and calculated time-to-empty values
 
 ### NASA Battery Data Set (Secondary, for R3 validation)
 - **Location**: `requests/5. Battery Data Set/`
@@ -108,12 +112,12 @@ We have access to **two primary datasets**, each serving distinct purposes:
 
 | Requirement | Primary Dataset | Secondary Dataset | Rationale |
 |-------------|-----------------|-------------------|-----------|
-| **R1: Model** | **Zenodo** | NASA (adapted) | Model parameters from real smartphone measurements |
-| **R2: Predictions** | **Zenodo** | - | 36,000 samples provide direct validation |
-| **R3: Sensitivity** | Zenodo + NASA | - | Zenodo for power, NASA for aging baseline |
-| **R4: Recommendations** | **Zenodo** | - | Component power breakdown guides advice |
+| **R1: Model** | **AndroWatts [17]** | NASA (adapted) | Model parameters from real smartphone measurements |
+| **R2: Predictions** | **AndroWatts + Mendeley** | - | 36,000 samples provide direct validation |
+| **R3: Sensitivity** | AndroWatts + NASA | - | AndroWatts for power, NASA for aging baseline |
+| **R4: Recommendations** | **AndroWatts [17]** | - | Component power breakdown guides advice |
 
-**Critical insight**: NASA data uses constant-current discharge (lab conditions), while Zenodo uses variable-power discharge (real smartphone usage). Parameters from NASA must be **adapted** (e.g., 0.29%/cycle → 0.08%/cycle capacity fade) before application to smartphone models.
+**Critical insight**: NASA data uses constant-current discharge (lab conditions), while AndroWatts uses variable-power discharge (real smartphone usage). Parameters from NASA must be **adapted** (e.g., 0.29%/cycle → 0.08%/cycle capacity fade) before application to smartphone models.
 
 ## 2.2 Model Requirements
 
@@ -121,13 +125,13 @@ Our continuous-time model must:
 
 1. **Be continuous-time**: Use differential equations, not discrete time-step simulations
 2. **Account for multiple power consumers**: Screen, processor, network, GPS, and other components
-3. **Use data-driven parameters**: Derive component power from Zenodo measurements
+3. **Use data-driven parameters**: Derive component power from AndroWatts measurements
 4. **Include environmental effects**: Temperature impacts moderated by thermal management
-5. **Consider battery aging**: Capacity fade with aging-specific OCV curves from Mendeley data
-6. **Predict time-to-empty**: Validated against Zenodo's 36,000 usage scenarios
+5. **Consider battery aging**: Capacity fade with aging-specific OCV curves from Mendeley data [18]
+6. **Predict time-to-empty**: Validated against the combined dataset's 36,000 usage scenarios
 7. **Model BMS behavior**: Shutdown threshold, power limiting, thermal throttling
 
-The key output is SOC(t), from which we derive time-to-empty predictions matching real-world smartphone behavior (validated against Zenodo dataset).
+The key output is SOC(t), from which we derive time-to-empty predictions matching real-world smartphone behavior (validated against AndroWatts + Mendeley data).
 
 ---
 
@@ -137,7 +141,7 @@ Each assumption is justified through either (1) **empirical data from the AndroW
 
 | Assumption | Justification Source |
 |------------|---------------------|
-| **A1**: Battery voltage varies with SOC following a polynomial relationship | Parameter estimation from NASA discharge data [8]; validated against published OCV curves [9] |
+| **A1**: Open-circuit voltage (OCV) varies with SOC following a polynomial relationship (for voltage display, not SOC calculation) | Parameter estimation from NASA discharge data [8]; validated against published OCV curves [9] |
 | **A2**: BMS triggers shutdown at 5% SOC | Apple iPhone technical specification [6]; Samsung Galaxy specifications [10] |
 | **A3**: Thermal throttling reduces processor power by up to 40% under sustained load | Measured data from AnandTech benchmark studies [11]; Qualcomm Snapdragon thermal specifications [12] |
 | **A4**: Capacity fade is 0.08% per cycle for smartphones | Derived from Apple Battery Health reports: 80% capacity at 500 cycles [6]; cross-validated with independent degradation studies [13] |
@@ -147,13 +151,20 @@ Each assumption is justified through either (1) **empirical data from the AndroW
 
 ## 3.1 Detailed Assumption Derivations and Validation
 
-### A1: SOC-Dependent Voltage Model
+### A1: Open-Circuit Voltage (OCV) Model
+
+**Purpose Clarification**: The V(SOC) model describes the **open-circuit voltage (OCV)** as a function of SOC. This is used for:
+1. Terminal voltage display (what users see on their phone)
+2. Battery health monitoring and BMS operations
+3. Understanding voltage drop behavior at different SOC levels
+
+**Note**: V(SOC) is **NOT** used for SOC calculation. Per the problem statement, SOC is defined as an energy ratio (能量比值), so SOC calculations use the constant nominal voltage $V_{nominal} = 3.7V$ (see Section 4.1).
 
 **Background**: Plett [1] (Chapter 2, Sections 2.1-2.2) establishes that open-circuit voltage (OCV) is a function of SOC but emphasizes that the specific relationship must be determined experimentally (Section 2.10). The reference explicitly notes that hysteresis effects (Section 2.7) influence this relationship.
 
 **Parameter Estimation Method**: We fitted a polynomial model to NASA Prognostics discharge data [8] using least-squares regression on Battery B0005-B0007 discharge curves:
 
-$$V(SOC) = V_{min} + (V_{max} - V_{min}) \cdot SOC^{\alpha}$$
+$$V_{OCV}(SOC) = V_{min} + (V_{max} - V_{min}) \cdot SOC^{\alpha}$$
 
 **Estimated Parameters from NASA Data**:
 - $V_{max} = 4.2V$ (standard Li-ion charge termination voltage, per manufacturer specifications)
@@ -168,7 +179,7 @@ $$V(SOC) = V_{min} + (V_{max} - V_{min}) \cdot SOC^{\alpha}$$
 | 50% | 3.56V | 3.50-3.60V | Within range |
 | 20% | 3.26V | 3.20-3.35V | Within range |
 
-**Feasibility**: The power-function form captures the characteristic steep voltage drop at low SOC observed in Li-ion batteries, while being computationally efficient for continuous-time modeling.
+**Feasibility**: The power-function form captures the characteristic steep voltage drop at low SOC observed in Li-ion batteries, while being computationally efficient for OCV modeling.
 
 ### A2: BMS Shutdown Threshold at 5% SOC
 
@@ -284,33 +295,38 @@ Figure 1 illustrates our model architecture, showing how data-driven inputs (And
 
 ## 4.1 Battery Fundamentals
 
-The state of charge (SOC) represents the remaining energy in the battery as a fraction of its full capacity:
+The state of charge (SOC) represents the remaining **energy** in the battery as a fraction of its full **energy** capacity (能量比值，不是电荷比值):
 
-$$SOC = \frac{Q_{remaining}}{Q_{total}}$$
+$$SOC = \frac{E_{remaining}}{E_{total}}$$
 
-The fundamental discharge equation follows from Coulomb counting:
+where $E_{total} = V_{nominal} \cdot Q_{total}$ is the total energy capacity (Wh).
 
-$$\frac{dSOC}{dt} = -\frac{I(t)}{Q_{total}}$$
+The fundamental discharge equation for energy-based SOC:
 
-Using the power-current relationship $P = V \cdot I$:
+$$\frac{dSOC}{dt} = -\frac{P(t)}{E_{total}} = -\frac{P(t)}{V_{nominal} \cdot Q_{total}}$$
 
-$$\frac{dSOC}{dt} = -\frac{P(t)}{V(SOC) \cdot Q_{total}}$$
+**Important**: Using nominal voltage $V_{nominal}$ (constant) instead of $V(SOC)$ (varying) ensures SOC is consistently defined as an energy ratio throughout discharge. The open-circuit voltage $V(SOC)$ is used for terminal voltage calculations, but not for SOC definition.
 
-## 4.2 SOC-Dependent Voltage Model
+## 4.2 Open-Circuit Voltage (OCV) Model
 
-**Key improvement over previous models**: Real Li-ion batteries have a non-linear voltage-SOC relationship, not constant voltage.
+**Purpose**: This model describes the open-circuit voltage (OCV) as a function of SOC, used for:
+- Terminal voltage display to users
+- BMS monitoring and shutdown decisions
+- Battery health diagnostics
 
-$$V(SOC) = V_{min} + (V_{max} - V_{min}) \cdot SOC^{\alpha}$$
+**Note**: OCV V(SOC) is NOT used in SOC calculation. The energy-based SOC formula uses constant $V_{nominal}$ (see Section 4.1).
+
+$$V_{OCV}(SOC) = V_{min} + (V_{max} - V_{min}) \cdot SOC^{\alpha}$$
 
 where:
 - $V_{max} = 4.2V$ (fully charged)
 - $V_{min} = 3.0V$ (BMS cutoff voltage)
 - $\alpha = 0.85$ (non-linearity factor)
 
-This captures the steeper voltage drop at low SOC, which is important for accurate discharge modeling near empty.
+This captures the steeper voltage drop at low SOC, which is important for accurate terminal voltage display and BMS operations.
 
-| SOC (%) | Voltage (V) | Notes |
-|---------|-------------|-------|
+| SOC (%) | OCV (V) | Notes |
+|---------|---------|-------|
 | 100 | 4.2 | Fully charged |
 | 80 | 4.0 | Still "full" indicator |
 | 50 | 3.6 | Mid-range |
@@ -319,7 +335,7 @@ This captures the steeper voltage drop at low SOC, which is important for accura
 
 ## 4.3 Power Consumption Model (Data-Driven)
 
-**Data Source**: Our power consumption parameters are derived from the **AndroWatts dataset** [17], which contains 1,000 real-world smartphone usage tests with fine-grained power measurements from perfetto traces. This eliminates the need for linear approximations used in previous studies.
+**Data Source**: Our power consumption parameters are derived from the **AndroWatts dataset** [17], which contains 1,000 real-world smartphone usage tests with fine-grained power measurements from perfetto traces. This provides empirical data with quantified uncertainty ($R^2$ values) rather than idealized assumptions.
 
 **Important Note on Power Measurements**: The AndroWatts dataset measures **system-level power at power rail level**, which includes measurement infrastructure overhead. The absolute power values (25-240W range) are higher than typical smartphone power consumption (2-15W) due to:
 1. Test harness and measurement equipment overhead
@@ -367,15 +383,29 @@ The display power increases by approximately **3.3× from lowest to highest brig
 
 From our analysis of the AndroWatts data (see `zenodo_data_analyzer.py`), CPU power follows a **frequency-power law**:
 
-$$P_{CPU} = 22883.25 \cdot f^{1.45} \text{ (raw measurement, mW)}$$
+$$P_{CPU,raw} = 22883.25 \cdot f^{1.45} \text{ (raw measurement, mW)}$$
 
 **Fitted parameters** (from actual data analysis run):
 - Coefficient: **22883.25**
 - Exponent: **1.45**
 - $R^2 = 0.5649$
 
-After scaling to realistic smartphone values:
-$$P_{CPU,scaled} \propto f^{1.45}$$
+**Note on Units and Scaling**: In the raw data, $f$ represents normalized CPU frequency (0 to 1, where 1 = maximum frequency). At full frequency ($f = 1$), the raw power is approximately 22.9 W, which is far higher than typical smartphone SoC power due to measurement harness overhead.
+
+For realistic smartphone modeling, we scale to typical smartphone CPU power ranges (100 mW idle to 4000 mW peak):
+
+$$P_{CPU,scaled} = P_{idle} + (P_{max} - P_{idle}) \cdot f^{1.45}$$
+
+Where:
+- $P_{idle} \approx 100$ mW (CPU in low-power state)
+- $P_{max} \approx 4000$ mW (sustained high load after thermal throttling)
+
+**Example values**:
+| Normalized Frequency ($f$) | Raw Power (W) | Scaled Power (mW) |
+|---------------------------|---------------|-------------------|
+| 0.1 (10%) | 0.8 | ~490 |
+| 0.5 (50%) | 8.4 | ~1300 |
+| 1.0 (100%) | 22.9 | ~4000 |
 
 The exponent of 1.45 is lower than the theoretical CMOS power law ($P \propto f \cdot V^2$) because:
 1. Modern SoCs use aggressive DVFS (Dynamic Voltage and Frequency Scaling)
@@ -505,15 +535,19 @@ The 80% floor represents the typical battery replacement threshold.
 
 ## 4.6 Complete Governing Equations
 
-The complete continuous-time model is:
+The complete continuous-time model uses **energy-based SOC** (能量比值):
 
-$$\boxed{\frac{dSOC}{dt} = -\frac{P_{total}(t, SOC, T)}{V(SOC) \cdot Q_{effective}(T, n)} - k_{self} \cdot SOC}$$
+$$\boxed{\frac{dSOC}{dt} = -\frac{P_{total}(t, T)}{E_{effective}(T, n)} - k_{self} \cdot SOC}$$
 
 where:
-- $P_{total}(t, SOC, T)$ = total power with thermal throttling and BMS limiting
-- $V(SOC) = 3.0 + 1.2 \cdot SOC^{0.85}$ (non-linear voltage)
-- $Q_{effective}(T, n) = Q_{nominal} \cdot f_{temp}(T) \cdot f_{age}(n)$
+- $SOC = E_{remaining} / E_{total}$ (energy ratio, not charge ratio)
+- $E_{effective}(T, n) = V_{nominal} \cdot Q_{effective}(T, n)$ (energy capacity in Wh)
+- $P_{total}(t, T)$ = total power with thermal throttling and BMS limiting
+- $Q_{effective}(T, n) = Q_{nominal} \cdot f_{temp}(T) \cdot f_{age}(n)$ (charge capacity)
+- $V_{nominal} = 3.7V$ (nominal voltage for energy calculations)
 - $k_{self} \approx 0.00005$ h⁻¹ (self-discharge rate)
+
+**Note**: The equation uses $V_{nominal}$ (constant) instead of $V(SOC)$ (varying) to ensure SOC is consistently defined as an energy ratio throughout the discharge process.
 
 **BMS Constraints:**
 - Simulation terminates at SOC = 5% (shutdown threshold)
@@ -532,19 +566,23 @@ The model was implemented in Python using the `scipy.integrate.solve_ivp` functi
 
 ```python
 def soc_derivative(t, SOC, usage_func):
+    # Calculate power consumption (W)
     P_total = calculate_power_consumption(usage_func(t), duration=t)
-    Q_eff = get_effective_capacity(temperature, cycles)
-    V_current = get_voltage(SOC)  # Non-linear V(SOC)
-    discharge_rate = -P_total / (V_current * Q_eff)
+    # Get effective energy capacity (Wh) using V_nominal for energy-based SOC
+    E_eff = get_effective_energy_capacity(temperature, cycles)  # V_nominal * Q_eff
+    # Energy-based discharge rate: dSOC/dt = -P/E
+    discharge_rate = -P_total / E_eff
     self_discharge = -k_self * SOC
     return discharge_rate + self_discharge
 ```
 
-## 5.2 Primary Data Source: Zenodo Dataset Analysis
+**Note**: The formula uses energy capacity $E_{eff} = V_{nominal} \cdot Q_{eff}$ (Wh) instead of $V(SOC) \cdot Q_{eff}$ to ensure SOC is consistently defined as an energy ratio (能量比值).
 
-**For Requirements R1, R2, R4**: We use the Zenodo dataset as the primary data source because it contains **real smartphone power consumption measurements**.
+## 5.2 Primary Data Source: AndroWatts Dataset Analysis
 
-### Zenodo Dataset Structure
+**For Requirements R1, R2, R4**: We use the AndroWatts dataset [17] (combined with Mendeley aging data [18]) as the primary data source because it contains **real smartphone power consumption measurements**.
+
+### Combined Dataset Structure
 
 | Aspect | Value | Significance |
 |--------|-------|--------------|
@@ -553,12 +591,12 @@ def soc_derivative(t, SOC, usage_func):
 | Power measurements | Real perfetto traces | Not assumptions or lab approximations |
 | Battery aging | 6 aging levels | new → EOL (SOH 1.0 → 0.63) |
 
-### Power Model Parameters (from Zenodo)
+### Power Model Parameters (from AndroWatts)
 
-All power consumption parameters in our model are derived from Zenodo data analysis (`zenodo_data_analyzer.py`):
+All power consumption parameters in our model are derived from AndroWatts data analysis (`zenodo_data_analyzer.py`):
 
-| Parameter | Zenodo Value | R² | Usage in Model |
-|-----------|-------------|-----|----------------|
+| Parameter | AndroWatts Value | R² | Usage in Model |
+|-----------|-----------------|-----|----------------|
 | Display power slope | 117.35 mW/brightness | 0.44 | $P_{display}(B)$ |
 | Display power intercept | 3018 mW | - | Baseline |
 | CPU frequency exponent | 1.45 | 0.56 | $P_{CPU} \propto f^{1.45}$ |
@@ -566,9 +604,9 @@ All power consumption parameters in our model are derived from Zenodo data analy
 | Display power share | 11.8% | - | Component breakdown |
 | Network power share | 9.0% | - | Component breakdown |
 
-### Time-to-Empty Validation (from Zenodo's 36,000 samples)
+### Time-to-Empty Validation (from 36,000 samples)
 
-The Zenodo dataset provides direct validation through **calculated t_empty_h_est** values:
+The combined dataset provides direct validation through **calculated t_empty_h_est** values:
 
 | Battery State | Mean t_empty (h) | Samples | SOH |
 |---------------|------------------|---------|-----|
@@ -595,7 +633,7 @@ The Zenodo dataset provides direct validation through **calculated t_empty_h_est
 
 ### Why NASA Data Cannot Be Used Directly for R1/R2
 
-| Factor | NASA Test | Smartphone Reality (Zenodo) |
+| Factor | NASA Test | Smartphone Reality (AndroWatts) |
 |--------|-----------|----------------------------|
 | Discharge mode | Constant 2A (1C) | Variable 0.3-3A |
 | Thermal management | None (bare cell) | Active cooling |
@@ -604,19 +642,19 @@ The Zenodo dataset provides direct validation through **calculated t_empty_h_est
 
 ### Adapted Parameters for Smartphone Model
 
-NASA data is used to **validate and cross-reference** our Zenodo-derived parameters:
+NASA data is used to **validate and cross-reference** our AndroWatts-derived parameters:
 
-| Parameter | NASA Raw | Zenodo/Adapted | Adaptation Rationale |
-|-----------|----------|----------------|---------------------|
+| Parameter | NASA Raw | AndroWatts/Adapted | Adaptation Rationale |
+|-----------|----------|-------------------|---------------------|
 | Capacity fade | 0.29%/cycle | **0.08%/cycle** | Variable power reduces stress |
 | Cold effect | -35% at -10°C | **-27%** | Phone casing insulation |
-| OCV coefficients | Direct measurement | Mendeley data | Age-specific polynomials |
+| OCV coefficients | Direct measurement | Mendeley data [18] | Age-specific polynomials |
 
 ![NASA Capacity Fade](pictures/nasa_capacity_fade.png)
 
 ## 5.4 Model Validation Summary
 
-Our model, primarily parameterized from Zenodo data, produces predictions matching real-world observations:
+Our model, primarily parameterized from AndroWatts data, produces predictions matching real-world observations:
 
 | Scenario | Model Prediction | Real-World Typical | Match |
 |----------|-----------------|-------------------|-------|
@@ -626,7 +664,7 @@ Our model, primarily parameterized from Zenodo data, produces predictions matchi
 | Light use | 18.2 hours | 15-18 hours | ✓ |
 | Idle | 48.6 hours | 24-48 hours | ✓ |
 
-**Model validation**: The predictions above are generated by `run_mcm_analysis.py` using Zenodo-derived parameters (see Section 6.1). All predictions fall within real-world expected ranges, demonstrating that our data-driven approach produces realistic estimates. The inclusion of thermal throttling (Section 4.4) is essential for accurate gaming predictions—without it, the model would underestimate battery life during sustained high-power activities.
+**Model validation**: The predictions above are generated by `run_mcm_analysis.py` using AndroWatts-derived parameters (see Section 6.1). All predictions fall within real-world expected ranges, demonstrating that our data-driven approach produces realistic estimates. The inclusion of thermal throttling (Section 4.4) is essential for accurate gaming predictions—without it, the model would underestimate battery life during sustained high-power activities.
 
 ## 5.5 Updated Parameter Table
 
@@ -646,13 +684,13 @@ Our model, primarily parameterized from Zenodo data, produces predictions matchi
 
 This section addresses **Requirement R2**: Predicting time-to-empty under various scenarios and identifying drivers of rapid battery drain.
 
-**Primary Data Source**: Zenodo dataset (36,000 samples with calculated t_empty_h_est)
+**Primary Data Source**: AndroWatts + Mendeley combined dataset (36,000 samples with calculated t_empty_h_est)
 
 ## 6.1 Usage Scenarios
 
-Six representative usage scenarios with predictions **generated by `run_mcm_analysis.py` using Zenodo-derived parameters**:
+Six representative usage scenarios with predictions **generated by `run_mcm_analysis.py` using AndroWatts-derived parameters**:
 
-| Scenario | Description | Power (mW) | Model Prediction (h) | Zenodo Validation |
+| Scenario | Description | Power (mW) | Model Prediction (h) | Dataset Validation |
 |----------|-------------|------------|---------------------|-------------------|
 | idle | Screen off, minimal background | **334** | **48.6** | ✓ In range [0.44, 90] |
 | light | Occasional screen, messages | **894** | **18.2** | ✓ In range |
@@ -661,26 +699,23 @@ Six representative usage scenarios with predictions **generated by `run_mcm_anal
 | navigation | GPS + screen + cellular | **2,482** | **6.5** | ✓ In range |
 | gaming | Max processor load | **3,670** | **4.4** | ✓ In range |
 
-**Validation against Zenodo**: The dataset shows t_empty ranging from 0.44h (extreme high power + aged battery) to 89.96h (low power + new battery), with mean 14.18h. All model predictions fall within this validated range.
+**Validation against dataset**: The dataset shows t_empty ranging from 0.44h (extreme high power + aged battery) to 89.96h (low power + new battery), with mean 14.18h. All model predictions fall within this validated range.
 
 ## 6.2 Discharge Curves
 
 ![Discharge Curves](pictures/mcm_discharge_curves.png)
 
-The discharge curves (generated from `run_mcm_analysis.py`) are **quasi-linear**, which is the correct physical behavior based on the Zenodo dataset's OCV polynomial.
+The discharge curves (generated from `run_mcm_analysis.py`) are **linear**, which is the correct physical behavior for energy-based SOC with constant power consumption.
 
-### Why Discharge Curves Are Nearly Linear
+### Why Discharge Curves Are Linear
 
-The Zenodo/Mendeley OCV polynomial shows that Li-ion battery voltage changes only **~16.5%** across the full SOC range (100%→10%):
+With energy-based SOC definition ($SOC = E_{remaining}/E_{total}$), the discharge rate is:
 
-| SOC | OCV (V) | Change from 100% |
-|-----|---------|------------------|
-| 100% | 4.21 | - |
-| 50% | 3.76 | -11% |
-| 20% | 3.59 | -15% |
-| 10% | 3.52 | -16.5% |
+$$\frac{dSOC}{dt} = -\frac{P}{E_{total}} = -\frac{P}{V_{nominal} \cdot Q_{total}}$$
 
-Since discharge rate is $\frac{dSOC}{dt} = -\frac{P}{V(SOC) \cdot Q}$, a 16.5% voltage variation produces only ~20% variation in discharge rate. This results in **quasi-linear discharge curves**, which is physically correct.
+Since both $V_{nominal} = 3.7V$ (constant) and $Q_{total}$ (constant for a given battery state) are constant during discharge, and power consumption P remains approximately constant for a fixed usage scenario, the discharge rate is **constant**. This results in **linear discharge curves**, which is physically correct for energy-based SOC.
+
+**Note**: The OCV (Open-Circuit Voltage) still varies with SOC (see Section 4.2), but this does not affect the SOC calculation. The OCV is only used for terminal voltage display and BMS operations.
 
 ### Model Scope and Applicability
 
@@ -688,11 +723,13 @@ Our model predicts **discharge rate given a specific usage scenario**:
 
 | Scenario | Power (mW) | Discharge Rate (%/h) | Time to Empty (100%→3%) |
 |----------|------------|---------------------|-------------------------|
-| Idle | 334 | ~2.0 | ~49h |
-| Light | 894 | ~5.2 | ~18h |
-| Moderate | 1598 | ~9.3 | ~10h |
-| Heavy | 2697 | ~15.8 | ~6h |
-| Gaming | 3670 | ~21.5 | ~4.5h |
+| Idle | 334 | ~2.0 | ~48h |
+| Light | 894 | ~5.4 | ~18h |
+| Moderate | 1598 | ~9.6 | ~10h |
+| Heavy | 2697 | ~16.2 | ~6h |
+| Gaming | 3670 | ~22.0 | ~4.4h |
+
+**Calculation basis**: $E_{eff} = V_{nominal} \cdot Q_{eff} = 3.7V \times 4500mAh = 16.65Wh$
 
 **What the model answers**: "If the user remains in scenario X, how fast will SOC decrease?"
 
@@ -700,7 +737,7 @@ Our model predicts **discharge rate given a specific usage scenario**:
 
 ### Why Users Perceive Battery Drain as "Unpredictable"
 
-The quasi-linear discharge curves above represent battery consumption under **single usage modes**. However, in reality, users frequently switch between different modes, causing the discharge curve slope to change abruptly.
+The linear discharge curves above represent battery consumption under **single usage modes**. However, in reality, users frequently switch between different modes, causing the discharge curve slope to change abruptly.
 
 **Illustrative Example** (not a model prediction):
 
@@ -710,12 +747,12 @@ The quasi-linear discharge curves above represent battery consumption under **si
 
 **Key observations from the example**:
 
-1. **Within each segment**: Discharge is quasi-linear (constant power → constant slope)
+1. **Within each segment**: Discharge is linear (constant power → constant slope)
 2. **At mode transitions**: Slope changes abruptly (power jumps from 334mW to 3670mW = 11× difference)
 3. **Overall curve**: Appears "piecewise linear" — each segment is straight, but slopes differ
 
 **The true source of perceived "unpredictability"**:
-- It is NOT the battery's electrochemical nonlinearity (OCV varies only 16.5%)
+- It is NOT the battery's electrochemical nonlinearity (OCV is separate from SOC calculation)
 - It IS the user's mode switching behavior (power varies up to 11×)
 
 ### Model's Explanatory Value
@@ -728,9 +765,9 @@ By quantifying power consumption differences across scenarios, our model explain
 
 The model provides a rational physical basis for understanding battery behavior, even though it cannot predict the unpredictable (user behavior patterns).
 
-## 6.3 Drivers of Rapid Battery Drain (from Zenodo Analysis)
+## 6.3 Drivers of Rapid Battery Drain (from AndroWatts Analysis)
 
-Power breakdown **derived from Zenodo dataset** (1,000 real device measurements):
+Power breakdown **derived from AndroWatts dataset** (1,000 real device measurements):
 
 | Component | % of Total | Impact |
 |-----------|-----------|--------|
@@ -744,7 +781,7 @@ Power breakdown **derived from Zenodo dataset** (1,000 real device measurements)
 
 ![Component Power Breakdown](pictures/mcm_component_breakdown.png)
 
-**Key findings from Zenodo data**:
+**Key findings from AndroWatts data**:
 
 1. **CPU is the dominant consumer** (42.4%), not screen - this contradicts common assumptions
 2. **Display power is secondary** (11.8%), but users often feel it's the main drain
@@ -753,7 +790,7 @@ Power breakdown **derived from Zenodo dataset** (1,000 real device measurements)
 
 ## 6.4 Comparison: Which Activities Drain Fastest?
 
-From **Zenodo's 36,000 samples**, we identify the correlation between power consumption and battery life:
+From the **36,000-sample dataset**, we identify the correlation between power consumption and battery life:
 
 | Power Level (W) | Typical Activity | Expected t_empty |
 |----------------|------------------|------------------|
@@ -778,13 +815,13 @@ From **Zenodo's 36,000 samples**, we identify the correlation between power cons
 
 This section addresses **Requirement R3**: Examining how predictions vary with changes in modeling assumptions, parameter values, and usage patterns.
 
-**Results generated by `run_mcm_analysis.py` using Zenodo-derived parameters.**
+**Results generated by `run_mcm_analysis.py` using AndroWatts-derived parameters.**
 
 ## 7.1 Parameter Sensitivity (from run_mcm_analysis.py)
 
 ![Sensitivity Analysis](pictures/mcm_sensitivity_analysis.png)
 
-### Brightness Sensitivity (using Zenodo brightness-power model)
+### Brightness Sensitivity (using AndroWatts brightness-power model)
 Baseline: Power=1,539mW, Time-to-empty=10.55h
 
 | Brightness | Power (mW) | Time (h) | Change |
@@ -795,7 +832,7 @@ Baseline: Power=1,539mW, Time-to-empty=10.55h
 | 70% | 1,656 | 9.81 | -7.1% |
 | 100% | 1,832 | 8.86 | **-16.0%** |
 
-### CPU Load Sensitivity (using Zenodo exponent=1.45)
+### CPU Load Sensitivity (using AndroWatts exponent=1.45)
 | CPU Load | Power (mW) | Time (h) | Change |
 |----------|------------|----------|--------|
 | 10% | 915 | 17.74 | **+68.1%** |
@@ -819,12 +856,12 @@ Baseline: Power=1,539mW, Time-to-empty=10.55h
 
 **Key finding**: Cold temperatures have significant impact (-25% at -10°C), while hot temperatures are moderated by phone thermal management (-4% at 45°C).
 
-## 7.3 Battery Aging Sensitivity (Model vs Zenodo Validation)
+## 7.3 Battery Aging Sensitivity (Model vs Dataset Validation)
 
-Comparing model predictions with Zenodo's 36,000-sample data:
+Comparing model predictions with 36,000-sample dataset:
 
-| Aging State | SOH | Model (h) | Zenodo (h) | Error |
-|-------------|-----|-----------|------------|-------|
+| Aging State | SOH | Model (h) | Dataset Mean (h) | Error |
+|-------------|-----|-----------|------------------|-------|
 | new | 1.000 | 10.55 | 14.18 | - |
 | slight | 0.950 | 10.02 | 13.47 | - |
 | moderate | 0.900 | 9.50 | 12.76 | - |
@@ -832,7 +869,7 @@ Comparing model predictions with Zenodo's 36,000-sample data:
 | old | 0.800 | 8.44 | 11.35 | - |
 | eol | 0.702 | 7.41 | 10.77 | - |
 
-**Note**: Model predicts shorter battery life than Zenodo mean because the baseline power (1,539mW) is higher than Zenodo's average usage. The **relative degradation pattern** (24% reduction from new to EOL) matches between model and data.
+**Note**: Model predicts shorter battery life than dataset mean because the baseline power (1,539mW) is higher than average usage. The **relative degradation pattern** (24% reduction from new to EOL) matches between model and data.
 
 **Key finding**: Battery life decreases 24% while SOH decreases 30%, indicating non-linear relationship.
 
@@ -851,29 +888,29 @@ Comparing model predictions with Zenodo's 36,000-sample data:
 
 This section addresses **Requirement R4**: Translating findings into practical recommendations for users and OS developers.
 
-**Primary Data Source**: Zenodo dataset component power breakdown
+**Primary Data Source**: AndroWatts dataset component power breakdown
 
-## 8.1 For Smartphone Users (Based on Zenodo Component Analysis)
+## 8.1 For Smartphone Users (Based on AndroWatts Component Analysis)
 
-Based on our analysis of **1,000 real device measurements** from Zenodo:
+Based on our analysis of **1,000 real device measurements** from AndroWatts:
 
 ![Optimization Impact](pictures/optimization_impact.png)
 
 ### High Impact (> 10% improvement)
-**From Zenodo data**: CPU accounts for **42.4%** of total power
+**From AndroWatts data**: CPU accounts for **42.4%** of total power
 
 1. **Reduce processor-intensive activities** (+45%): 
    - Close gaming, video editing apps when not needed
-   - Zenodo data shows CPU frequency directly correlates with power ($f^{1.45}$)
+   - Data shows CPU frequency directly correlates with power ($f^{1.45}$)
    
 2. **Disable GPS when not needed** (+10.1%): 
    - GPS power is ~350 mW but impacts other components
    
 3. **Use WiFi instead of cellular** (+9.1%): 
-   - From Zenodo: WLAN/BT accounts for 9.0% vs. variable cellular
+   - From AndroWatts: WLAN/BT accounts for 9.0% vs. variable cellular
 
 ### Medium Impact
-**From Zenodo data**: Display accounts for **11.8%** of total power
+**From AndroWatts data**: Display accounts for **11.8%** of total power
 
 4. **Reduce screen brightness** (+16% at max reduction):
    - Model result: 10% brightness → 12.46h vs 100% → 8.86h
@@ -885,10 +922,10 @@ Based on our analysis of **1,000 real device measurements** from Zenodo:
 | Baseline (high use) | 2,599 | 6.25 | - |
 | Optimized (low use) | 947 | 17.14 | **+174%** |
 
-## 8.2 For Operating System Developers (Informed by Zenodo)
+## 8.2 For Operating System Developers (Informed by AndroWatts Data)
 
 1. **CPU-First Power Management**:
-   - Zenodo reveals CPU is **42.4%** of power (not screen as often assumed)
+   - AndroWatts reveals CPU is **42.4%** of power (not screen as often assumed)
    - Model shows: 90%→10% CPU load = **+68% battery life**
    - Focus power management on CPU scaling before display dimming
 
@@ -901,12 +938,12 @@ Based on our analysis of **1,000 real device measurements** from Zenodo:
    - Consider adjusting shutdown threshold based on usage pattern
    - From model: SOH 1.0→0.70 reduces battery life by ~30%
 
-## 8.3 For Battery Longevity (From Model + Zenodo Aging Data)
+## 8.3 For Battery Longevity (From Model + Mendeley Aging Data)
 
 **Model predictions for different aging states**:
 
-| SOH Level | Model Prediction | Zenodo Mean | Action |
-|-----------|-----------------|-------------|--------|
+| SOH Level | Model Prediction | Dataset Mean | Action |
+|-----------|-----------------|--------------|--------|
 | 1.00 (New) | 10.55 h | 14.18 h | Maintain with care |
 | 0.90 (Moderate) | 9.50 h | 12.76 h | Normal use OK |
 | 0.80 (Old) | 8.44 h | 11.35 h | Consider replacement |
@@ -924,11 +961,11 @@ To extend battery lifespan:
 
 ## 9.1 Strengths
 
-1. **Data-driven parameters**: Power consumption derived from 1,000 real device measurements (AndroWatts), not linear approximations
-2. **Empirical brightness-power relationship**: Display power increases ~3.3× from low to max brightness, fitted from real data ($R^2 = 0.44$)
+1. **Data-driven parameters**: Power consumption derived from 1,000 real device measurements (AndroWatts [17]), not linear approximations
+2. **Empirical brightness-power relationship**: Display power increases ~3.3× from low to max brightness, linear fit from real data ($R^2 = 0.44$)
 3. **Validated component breakdown**: CPU (42.4%), Display (11.8%), Network (9.2%) from measured data
-4. **Aging-specific OCV curves**: Polynomial coefficients from Mendeley degradation data
-5. **SOC-dependent voltage**: Non-linear V(SOC) model captures discharge dynamics accurately
+4. **Aging-specific OCV curves**: Polynomial coefficients from Mendeley degradation data [18]
+5. **OCV model for voltage display**: Non-linear V(SOC) model for terminal voltage; V_nominal for SOC calculation
 6. **Thermal-power feedback**: Processor throttling explains why gaming battery life exceeds simple calculations
 7. **BMS constraints**: 5% shutdown threshold matches real smartphone behavior
 8. **Physics-based foundation**: Model is grounded in electrochemical principles
@@ -946,12 +983,13 @@ To extend battery lifespan:
 
 | Aspect | Previous Model | Current Model (Data-Driven) |
 |--------|---------------|---------------|
-| Power parameters | Linear assumptions | Empirical from AndroWatts |
-| Brightness model | Linear: $P \propto B$ | Non-linear: ~3.3× increase low→max |
+| SOC definition | Implicit charge ratio | **Energy ratio: SOC = E/E_total** |
+| Power parameters | Linear assumptions | Empirical from AndroWatts [17] |
+| Brightness model | Assumed linear | Linear with $R^2 = 0.44$: ~3.3× increase low→max |
 | CPU model | Fixed values | $P \propto f^{1.45}$ (fitted) |
 | Component breakdown | Estimated (CPU 70%) | Measured: CPU 42.4%, Display 11.8% |
-| Voltage | Constant 3.45V | V(SOC) = 3.0-4.2V |
-| OCV(SOC) | Generic curve | Aging-specific polynomials (Mendeley) |
+| SOC calculation | dSOC/dt = -P/(V(SOC)×Q) | **dSOC/dt = -P/(V_nominal×Q), V_nominal=3.7V** |
+| OCV model | Generic curve | Aging-specific polynomials from Mendeley [18] |
 | Capacity fade | 0.29%/cycle (NASA) | 0.08%/cycle (cross-validated) |
 | Shutdown SOC | 0% (1%) | 5% (BMS) |
 
@@ -959,17 +997,18 @@ To extend battery lifespan:
 
 # 10. Conclusions
 
-We developed a **data-driven continuous-time mathematical model** for smartphone battery state of charge that successfully predicts battery behavior under diverse usage conditions. The model's key innovation is the use of **real-world measurement data** (AndroWatts, Mendeley) to derive power consumption relationships, eliminating the need for linear approximations.
+We developed a **data-driven continuous-time mathematical model** for smartphone battery state of charge that successfully predicts battery behavior under diverse usage conditions. The model's key innovation is the use of **real-world measurement data** (AndroWatts [17], Mendeley [18]) to derive power consumption relationships with quantified uncertainty.
 
 **Key features:**
 
-1. **Empirical power relationships**: Component power proportions derived from 1,000 real device tests
-2. **Non-linear brightness-power relationship**: Display power increases ~3.3× from minimum to maximum brightness
-3. **Frequency-power law**: CPU power scales as $f^{1.45}$
-4. **SOC-dependent voltage** (4.2V → 3.0V) for accurate discharge modeling
-5. **BMS constraints** (5% shutdown, power limiting)
-6. **Thermal throttling** for realistic gaming/heavy-use scenarios
-7. **Aging-specific OCV curves** from measured degradation data
+1. **Energy-based SOC definition**: SOC = E_remaining/E_total using V_nominal = 3.7V (constant)
+2. **Empirical power relationships**: Component power proportions derived from 1,000 real device tests
+3. **Data-driven brightness-power relationship**: Linear fit with $R^2 = 0.44$; display power increases ~3.3× from min to max brightness
+4. **Frequency-power law**: CPU power scales as $f^{1.45}$
+5. **OCV model for voltage display**: V(SOC): 4.2V → 3.0V (not used for SOC calculation)
+6. **BMS constraints** (5% shutdown, power limiting)
+7. **Thermal throttling** for realistic gaming/heavy-use scenarios
+8. **Aging-specific OCV curves** from measured degradation data
 
 **Data-driven findings:**
 
@@ -1119,14 +1158,15 @@ The model parameters are derived from two real-world datasets located in `reques
 
 | Issue | Previous Model | Current Model (Data-Driven) |
 |-------|---------------|---------------|
+| SOC definition | Implicit charge ratio | **Energy ratio: SOC = E/E_total** |
 | Data utilization | Subset analysis | **Full 36,000 rows for aging analysis** |
 | Power model source | Linear assumptions | AndroWatts dataset (1,000 tests) |
 | Brightness-power | Linear: $P \propto B$ | Empirical: $P = 117.35B + 3018$ |
 | CPU-frequency | Assumed | Fitted: $P \propto f^{1.45}$ |
 | Component breakdown | Estimated (CPU 70%) | Measured: CPU 42.4%, Display 11.8% |
 | Battery life analysis | Theoretical | **Empirical: 36,000 samples** |
-| Voltage constant | 3.45V always | V(SOC) = 3.0 + 1.2×SOC^0.85 |
-| OCV(SOC) curve | Generic | Aging-specific (Mendeley data) |
+| SOC calculation | dSOC/dt = -P/(V(SOC)×Q) | **dSOC/dt = -P/(V_nominal×Q), V_nominal=3.7V** |
+| OCV(SOC) curve | Generic | Aging-specific (for voltage display only) |
 | Capacity fade | 0.29%/cycle (NASA 1C) | 0.08%/cycle (cross-validated) |
 | BMS shutdown | 0% or 1% | 5% (realistic) |
 | Thermal feedback | None | Throttling at 70%+ load |

@@ -69,6 +69,7 @@ class ZenodoBasedBatteryParams:
     # Voltage range
     V_max: float = 4.2
     V_min: float = 3.0
+    V_nominal: float = 3.7  # Nominal voltage for energy-based SOC calculation
 
 
 @dataclass
@@ -118,10 +119,13 @@ class ZenodoBasedSOCModel:
     """
     Continuous-time SOC model using Zenodo-derived parameters
     
-    Core equation:
-    dSOC/dt = -P_total(t) / (V(SOC) * Q_effective) - k_self * SOC
+    SOC Definition (per problem statement):
+    SOC = E_remaining / E_total (energy ratio, 能量比值，不是电荷比值)
     
-    where V(SOC) uses OCV polynomial from Zenodo/Mendeley data
+    Core equation (energy-based):
+    dSOC/dt = -P_total(t) / E_effective - k_self * SOC
+    
+    where E_effective = V_nominal × Q_effective is the energy capacity (Wh)
     """
     
     def __init__(self, battery: ZenodoBasedBatteryParams = None,
@@ -199,24 +203,29 @@ class ZenodoBasedSOCModel:
     def soc_derivative(self, t: float, soc: float, power_mw: float, 
                       soh: float = 1.0, temperature: float = 25.0) -> float:
         """
-        Core ODE: dSOC/dt
+        Core ODE: dSOC/dt (energy-based)
         
-        dSOC/dt = -P / (V(SOC) * Q_eff) - k_self * SOC
+        Per problem statement: SOC = E_remaining / E_total (能量比值)
         
-        Uses Zenodo OCV polynomial directly without artificial modifications.
+        dSOC/dt = -P / E_eff - k_self * SOC
+        
+        where E_eff = V_nominal × Q_eff is the energy capacity (Wh).
+        Uses V_nominal (constant) for consistent energy-based SOC definition.
         """
         if soc <= self.battery.shutdown_soc:
             return 0.0
         
-        V = self.get_ocv(soc)
         Q_eff = self.get_effective_capacity(soh, temperature)
         
         # Power in Watts, Capacity in Ah
         P_watts = power_mw / 1000
         Q_ah = Q_eff / 1000
         
-        # Discharge rate (per hour)
-        discharge_rate = -P_watts / (V * Q_ah)
+        # Energy capacity in Wh (E = V_nominal × Q)
+        E_wh = self.battery.V_nominal * Q_ah
+        
+        # Discharge rate (per hour) using energy-based formula
+        discharge_rate = -P_watts / E_wh
         self_discharge = -self.k_self * soc
         
         return discharge_rate + self_discharge
@@ -607,8 +616,8 @@ def generate_figures(model: ZenodoBasedSOCModel, r2_results: dict,
     V_10 = model.get_ocv(0.1)
     V_change = (V_100 - V_10) / V_100 * 100
     
-    # Add annotation explaining near-linear behavior
-    ax_ocv.annotate(f'Voltage change: {V_change:.1f}%\n(100%→10% SOC)\n\nNearly flat plateau\n→ quasi-linear discharge', 
+    # Add annotation explaining OCV is for display only, not SOC calculation
+    ax_ocv.annotate(f'OCV varies {V_change:.1f}%\n(100%→10% SOC)\n\nNote: OCV is for\nvoltage display only,\nnot SOC calculation', 
                      xy=(50, 3.5), fontsize=9, ha='center',
                      bbox=dict(boxstyle='round', facecolor='lightyellow', alpha=0.8))
     
@@ -617,8 +626,8 @@ def generate_figures(model: ZenodoBasedSOCModel, r2_results: dict,
     plt.close()
     print(f"Saved: {FIGURES_DIR}/mcm_discharge_curves.png")
     
-    # Additional Figure: OCV curve and discharge rate analysis
-    fig, (ax_ocv, ax_rate) = plt.subplots(1, 2, figsize=(12, 5))
+    # Additional Figure: OCV curve (OCV is for terminal voltage display, not SOC calculation)
+    fig, ax_ocv = plt.subplots(1, 1, figsize=(8, 5))
     
     # OCV vs SOC curve
     soc_vals = np.linspace(0.01, 1, 100)
@@ -628,36 +637,18 @@ def generate_figures(model: ZenodoBasedSOCModel, r2_results: dict,
     ax_ocv.axvline(x=5, color='red', linestyle='--', alpha=0.7, label='BMS shutdown')
     ax_ocv.set_xlabel('State of Charge (%)', fontsize=12)
     ax_ocv.set_ylabel('Open Circuit Voltage (V)', fontsize=12)
-    ax_ocv.set_title('OCV-SOC Relationship\n(Non-linear, steeper at low SOC)', fontsize=13)
+    ax_ocv.set_title('OCV-SOC Relationship\n(For terminal voltage display, not SOC calculation)', fontsize=13)
     ax_ocv.legend()
     ax_ocv.grid(True, alpha=0.3)
     ax_ocv.set_xlim(0, 100)
     
-    # Discharge rate vs SOC
-    P_test = 1000  # 1W test power
-    Q_test = 4.5   # 4.5Ah capacity
-    dsoc_dt = []
-    for soc in soc_vals:
-        V = model.get_ocv(soc)
-        rate = abs(P_test / 1000 / (V * Q_test)) * 100  # %/hour
-        dsoc_dt.append(rate)
-    
-    ax_rate.plot(soc_vals * 100, dsoc_dt, 'r-', linewidth=2.5)
-    ax_rate.axvline(x=20, color='orange', linestyle='--', alpha=0.7, label='Low SOC zone')
-    ax_rate.set_xlabel('State of Charge (%)', fontsize=12)
-    ax_rate.set_ylabel('Discharge Rate (%/hour at 1W)', fontsize=12)
-    ax_rate.set_title('Discharge Rate vs SOC\n(Higher rate = faster drain)', fontsize=13)
-    ax_rate.legend()
-    ax_rate.grid(True, alpha=0.3)
-    ax_rate.set_xlim(0, 100)
-    
-    # Annotate the acceleration at low SOC
-    rate_at_80 = dsoc_dt[int(80/100*99)]
-    rate_at_10 = dsoc_dt[int(10/100*99)]
-    ax_rate.annotate(f'{rate_at_10/rate_at_80:.1f}x faster\nat low SOC', 
-                     xy=(10, rate_at_10), xytext=(30, rate_at_10 + 1),
-                     arrowprops=dict(arrowstyle='->', color='red'),
-                     fontsize=10, color='red')
+    # Add annotation explaining OCV purpose
+    V_100 = model.get_ocv(1.0)
+    V_10 = model.get_ocv(0.1)
+    V_change = (V_100 - V_10) / V_100 * 100
+    ax_ocv.annotate(f'OCV varies {V_change:.1f}%\n(100%→10% SOC)\n\nUsed for:\n• Terminal voltage display\n• BMS monitoring\n\nNOT used for SOC calculation\n(uses V_nominal = 3.7V instead)', 
+                     xy=(50, 3.5), fontsize=9, ha='center',
+                     bbox=dict(boxstyle='round', facecolor='lightyellow', alpha=0.8))
     
     plt.tight_layout()
     plt.savefig(f'{FIGURES_DIR}/mcm_ocv_analysis.png', dpi=150, bbox_inches='tight')
@@ -815,18 +806,22 @@ def main():
     
     # R1: Model is the model itself - document its structure
     print("\n" + "="*70)
-    print("R1: Continuous-Time SOC Model")
+    print("R1: Continuous-Time SOC Model (Energy-Based)")
     print("="*70)
+    print("\nSOC Definition (per problem statement):")
+    print("  SOC = E_remaining / E_total (能量比值，不是电荷比值)")
     print("\nGoverning equation:")
-    print("  dSOC/dt = -P_total(t) / (V(SOC) * Q_eff) - k_self * SOC")
+    print("  dSOC/dt = -P_total(t) / E_eff - k_self * SOC")
     print("\nwhere:")
-    print("  V(SOC) = OCV polynomial from Zenodo/Mendeley data")
-    print("  Q_eff = f(SOH, temperature)")
+    print("  E_eff = V_nominal × Q_eff (energy capacity in Wh)")
+    print("  V_nominal = 3.7V (constant nominal voltage)")
+    print("  Q_eff = f(SOH, temperature) (charge capacity)")
     print("  P_total = f(brightness, CPU_load, network, ...) using Zenodo model")
     
     all_results['r1_model'] = {
-        'equation': 'dSOC/dt = -P_total(t) / (V(SOC) * Q_eff) - k_self * SOC',
-        'voltage_model': 'OCV polynomial from Zenodo (c0-c5)',
+        'equation': 'dSOC/dt = -P_total(t) / E_eff - k_self * SOC',
+        'soc_definition': 'SOC = E_remaining / E_total (energy ratio)',
+        'energy_model': 'E_eff = V_nominal × Q_eff (V_nominal = 3.7V)',
         'power_model': 'Zenodo brightness-power and CPU-frequency models',
         'data_source': 'Zenodo dataset (1,000 unique tests)'
     }

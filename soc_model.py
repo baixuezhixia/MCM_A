@@ -266,10 +266,17 @@ class SmartphoneBatterySOCModel:
     Continuous-Time Model for Smartphone Battery SOC
     智能手机电池SOC连续时间模型
     
-    Core Equation (from problem statement):
-    dSOC(t)/dt = -P_total(t) / C
+    SOC Definition (per problem statement):
+    SOC = E_remaining / E_total (能量比值，不是电荷比值)
+    SOC is the ratio of remaining energy to total energy capacity, expressed as a fraction (0 to 1).
     
-    Where SOC(t) = E(t)/C is the state of charge (0 to 1)
+    Core Equation:
+    dSOC(t)/dt = -P_total(t) / E_total
+    
+    Where:
+    - SOC(t) = E(t)/E_total is the state of charge (0 to 1)
+    - E_total = V_nominal × Q_total is the total energy capacity (Wh)
+    - P_total(t) is the total power consumption (W)
     
     Power Decomposition:
     P_total(t) = P_base + P_screen(t) + P_cpu(t) + P_network(t) + P_GPS(t) + P_other(t)
@@ -289,13 +296,21 @@ class SmartphoneBatterySOCModel:
         
     def get_effective_capacity_Wh(self, temperature: float, cycles: int = None) -> float:
         """
-        Calculate effective battery capacity considering temperature and aging.
+        Calculate effective energy capacity (Wh) for SOC calculations.
         
-        Capacity model:
-        C_eff = C_nominal × f_temp(T) × f_age(n)
+        Per problem statement: SOC = E_remaining / E_total (能量比值)
+        
+        Energy capacity model:
+        E_eff = E_nominal × f_temp(T) × f_age(n)
+        
+        Where E_nominal = V_nominal × Q_nominal (energy = voltage × charge)
         
         Temperature factor from industry data.
         Aging factor from NASA battery dataset.
+        
+        Returns:
+        --------
+        float : Effective energy capacity in Wh
         """
         if cycles is None:
             cycles = self.cycle_count
@@ -421,17 +436,23 @@ class SmartphoneBatterySOCModel:
     def dSOC_dt(self, t: float, SOC: float, 
                 usage_func: Callable[[float], UsageState] = None) -> float:
         """
-        Core differential equation:
-        dSOC(t)/dt = -P_total(t) / C
+        Core differential equation (energy-based):
+        dSOC(t)/dt = -P_total(t) / E_total
         
+        Per problem statement: SOC = E_remaining / E_total (能量比值)
         This is the fundamental continuous-time equation governing battery drain.
+        
+        Where:
+        - E_total = C_eff_Wh is the effective energy capacity (Wh)
+        - P_total is the total power consumption (W)
+        - dSOC/dt = Power(W) / Energy(Wh) = rate per hour
         
         Parameters:
         -----------
         t : float
             Time in hours
         SOC : float
-            Current state of charge (0 to 1)
+            Current state of charge (0 to 1) = E_remaining / E_total
         usage_func : callable
             Function that returns UsageState for given time t
         
@@ -448,13 +469,13 @@ class SmartphoneBatterySOCModel:
         # Calculate total power in Watts
         P_total_W = self.calculate_P_total(usage) / 1000.0
         
-        # Get effective capacity in Wh
+        # Get effective energy capacity in Wh (E_total = V_nominal × Q_total)
         C_eff_Wh = self.get_effective_capacity_Wh(
             temperature=usage.temperature_C,
             cycles=self.cycle_count
         )
         
-        # Core equation: dSOC/dt = -P_total / C
+        # Core equation: dSOC/dt = -P_total / E_total (energy-based)
         dSOC = -P_total_W / C_eff_Wh
         
         return dSOC

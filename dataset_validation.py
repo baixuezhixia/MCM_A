@@ -443,17 +443,16 @@ def validate_against_nasa_data() -> Dict:
         nasa_discharge_time_h = curve.duration_hours
         
         # Calculate effective power that would drain our model battery in same time
-        # P = V * Q / t
-        # For our model: P_model = V_nom * Q_model / t_nasa
-        # Q_model = 3.5Ah (our model), t_nasa from data, V_nom = 3.45V
+        # Energy-based SOC: dSOC/dt = -P / E_total = -P / (V_nominal * Q)
+        # For our model: E_total = V_nominal * Q_model = 3.7V * 4.5Ah = 16.65Wh
         
         # Instead of matching power, let's create a usage profile that approximately
         # matches the NASA discharge rate (% SOC per hour)
         nasa_drain_rate_per_hour = 1.0 / nasa_discharge_time_h  # fraction/hour
         
-        # Our model drains at: P / (V * Q) per hour
-        # So we need P = drain_rate * V * Q
-        # Required power = nasa_drain_rate_per_hour * 3.45 * 3500 = mW
+        # Our model drains at: P / (V_nominal * Q) per hour (energy-based SOC)
+        # So we need P = drain_rate * V_nominal * Q
+        # Required power = nasa_drain_rate_per_hour * V_nominal * Q (in mW)
         required_power_mw = nasa_drain_rate_per_hour * model.V_nominal * model.battery.nominal_capacity
         
         # Set processor load to achieve approximately this power
