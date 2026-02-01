@@ -276,6 +276,12 @@ where $S \in [0,1]$ is normalized signal strength. With $P_{base}$ = 200 mW and 
 
 # 4. Model Development
 
+The following flowchart provides an overview of our complete battery model architecture, showing how data sources, component power models, and the continuous-time ODE solver interact to predict SOC and time-to-empty:
+
+![Model Architecture Flowchart](pictures/model_flowchart.png)
+
+*Figure: Complete model architecture showing (left) input parameters and data sources, (center) continuous-time ODE core with SOC evolution, OCV mapping, effective capacity, and thermal management, (right) BMS constraints, and (bottom) multi-component power decomposition.*
+
 ## 4.1 Battery Fundamentals
 
 The state of charge (SOC) represents the remaining energy in the battery as a fraction of its full capacity:

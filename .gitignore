@@ -34,3 +34,8 @@ env/
 # OS
 .DS_Store
 Thumbs.db
+
+# LaTeX auxiliary files
+*.aux
+*.log
+*.synctex.gz
