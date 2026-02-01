@@ -616,8 +616,8 @@ def generate_figures(model: ZenodoBasedSOCModel, r2_results: dict,
     V_10 = model.get_ocv(0.1)
     V_change = (V_100 - V_10) / V_100 * 100
     
-    # Add annotation explaining near-linear behavior
-    ax_ocv.annotate(f'Voltage change: {V_change:.1f}%\n(100%→10% SOC)\n\nNearly flat plateau\n→ quasi-linear discharge', 
+    # Add annotation explaining OCV is for display only, not SOC calculation
+    ax_ocv.annotate(f'OCV varies {V_change:.1f}%\n(100%→10% SOC)\n\nNote: OCV is for\nvoltage display only,\nnot SOC calculation', 
                      xy=(50, 3.5), fontsize=9, ha='center',
                      bbox=dict(boxstyle='round', facecolor='lightyellow', alpha=0.8))
     
@@ -626,8 +626,8 @@ def generate_figures(model: ZenodoBasedSOCModel, r2_results: dict,
     plt.close()
     print(f"Saved: {FIGURES_DIR}/mcm_discharge_curves.png")
     
-    # Additional Figure: OCV curve and discharge rate analysis
-    fig, (ax_ocv, ax_rate) = plt.subplots(1, 2, figsize=(12, 5))
+    # Additional Figure: OCV curve (OCV is for terminal voltage display, not SOC calculation)
+    fig, ax_ocv = plt.subplots(1, 1, figsize=(8, 5))
     
     # OCV vs SOC curve
     soc_vals = np.linspace(0.01, 1, 100)
@@ -637,36 +637,18 @@ def generate_figures(model: ZenodoBasedSOCModel, r2_results: dict,
     ax_ocv.axvline(x=5, color='red', linestyle='--', alpha=0.7, label='BMS shutdown')
     ax_ocv.set_xlabel('State of Charge (%)', fontsize=12)
     ax_ocv.set_ylabel('Open Circuit Voltage (V)', fontsize=12)
-    ax_ocv.set_title('OCV-SOC Relationship\n(Non-linear, steeper at low SOC)', fontsize=13)
+    ax_ocv.set_title('OCV-SOC Relationship\n(For terminal voltage display, not SOC calculation)', fontsize=13)
     ax_ocv.legend()
     ax_ocv.grid(True, alpha=0.3)
     ax_ocv.set_xlim(0, 100)
     
-    # Discharge rate vs SOC
-    P_test = 1000  # 1W test power
-    Q_test = 4.5   # 4.5Ah capacity
-    dsoc_dt = []
-    for soc in soc_vals:
-        V = model.get_ocv(soc)
-        rate = abs(P_test / 1000 / (V * Q_test)) * 100  # %/hour
-        dsoc_dt.append(rate)
-    
-    ax_rate.plot(soc_vals * 100, dsoc_dt, 'r-', linewidth=2.5)
-    ax_rate.axvline(x=20, color='orange', linestyle='--', alpha=0.7, label='Low SOC zone')
-    ax_rate.set_xlabel('State of Charge (%)', fontsize=12)
-    ax_rate.set_ylabel('Discharge Rate (%/hour at 1W)', fontsize=12)
-    ax_rate.set_title('Discharge Rate vs SOC\n(Higher rate = faster drain)', fontsize=13)
-    ax_rate.legend()
-    ax_rate.grid(True, alpha=0.3)
-    ax_rate.set_xlim(0, 100)
-    
-    # Annotate the acceleration at low SOC
-    rate_at_80 = dsoc_dt[int(80/100*99)]
-    rate_at_10 = dsoc_dt[int(10/100*99)]
-    ax_rate.annotate(f'{rate_at_10/rate_at_80:.1f}x faster\nat low SOC', 
-                     xy=(10, rate_at_10), xytext=(30, rate_at_10 + 1),
-                     arrowprops=dict(arrowstyle='->', color='red'),
-                     fontsize=10, color='red')
+    # Add annotation explaining OCV purpose
+    V_100 = model.get_ocv(1.0)
+    V_10 = model.get_ocv(0.1)
+    V_change = (V_100 - V_10) / V_100 * 100
+    ax_ocv.annotate(f'OCV varies {V_change:.1f}%\n(100%→10% SOC)\n\nUsed for:\n• Terminal voltage display\n• BMS monitoring\n\nNOT used for SOC calculation\n(uses V_nominal = 3.7V instead)', 
+                     xy=(50, 3.5), fontsize=9, ha='center',
+                     bbox=dict(boxstyle='round', facecolor='lightyellow', alpha=0.8))
     
     plt.tight_layout()
     plt.savefig(f'{FIGURES_DIR}/mcm_ocv_analysis.png', dpi=150, bbox_inches='tight')
