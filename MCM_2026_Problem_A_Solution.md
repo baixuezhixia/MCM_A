@@ -626,13 +626,13 @@ Our model, primarily parameterized from Zenodo data, produces predictions matchi
 
 | Parameter | Our Value | Validation Source |
 |-----------|-----------|-------------------|
-| Battery Capacity | **4500 mAh** | Modern smartphone spec |
-| Voltage | **3.0-4.2 V (SOC-dependent)** | OCV curve |
-| Capacity fade | **0.08%/cycle** | Industry reports (Apple, Samsung) |
-| BMS shutdown | **5% SOC** | Standard smartphone BMS |
-| Screen Power | 125-375 mW | AMOLED typical |
-| CPU Power | 80-4000 mW (sustained: 2500) | With thermal throttling |
-| GPS Power | 350 mW | Modern low-power |
+| Battery Capacity | **4500 mAh** | 见上文 Section 3.1 A6；Apple [15]、Samsung [10] 技术规格 |
+| Voltage | **3.0-4.2 V (SOC-dependent)** | 见上文 Section 3.1 A1；Mendeley OCV多项式 [18]；Rahmani & Benbouzid [5] |
+| Capacity fade | **0.08%/cycle** | 见上文 Section 4.5；Apple [6]、Samsung报告；Battery University [2] |
+| BMS shutdown | **5% SOC** | 见上文 Section 3.1 A2；Apple [6]、Samsung [10] 规格 |
+| Screen Power | 125-375 mW | 见上文 Section 4.3 Screen Power Model；AndroWatts数据集 [17] |
+| CPU Power | 80-4000 mW (sustained: 2500) | 见上文 Section 3.1 A3、Section 4.4；AnandTech [11]、Qualcomm [12] |
+| GPS Power | 350 mW | 见上文 Section 3.1 A7；Carroll & Heiser [3] |
 
 ---
 
@@ -684,10 +684,22 @@ Since discharge rate is $\frac{dSOC}{dt} = -\frac{P}{V(SOC) \cdot Q}$, a 20% vol
 
 ### Comparison with Reality
 
-This quasi-linear behavior matches real smartphone user experience:
-- Battery percentage drops at a roughly constant rate during consistent usage
-- The "last 20%" doesn't drain dramatically faster than middle ranges
-- This validates the Zenodo OCV polynomial as realistic for modern Li-ion cells
+上述准线性放电曲线展示的是**单一使用模式**下的理想电量消耗规律，然而现实中用户体验到的电量变化往往显得"难以预测"——有时电量似乎消耗很快，有时又感觉掉电很慢。
+
+**这一现象的真正原因**：用户在实际使用中**不会长时间停留在某一固定的耗电模式**，而是频繁地在不同耗电模式之间切换。例如：
+- 一会儿玩游戏（高功耗：3670 mW），电量骤降
+- 随后切换到微信聊天（中等功耗：~1600 mW），掉电速度明显变慢
+- 之后手机锁屏放入口袋（低功耗：~334 mW），电量几乎不变
+- 突然需要使用导航（高功耗：2482 mW），电量又开始快速下降
+
+这种**模式间的频繁切换**——无论是主动选择还是无意中触发——使得实际电池表现看起来"常常难以预测"。
+
+**模型的解释价值**：本模型通过量化不同使用场景下的功耗差异（从334 mW的待机到3670 mW的游戏，相差约11倍），清晰地解释了为什么手机电量消耗时快时慢：
+1. **电量消耗速率取决于当前使用模式**：不同模式下的放电斜率差异显著
+2. **模式切换导致斜率突变**：用户在不同场景间切换时，放电曲线的斜率随之改变
+3. **主观感知的"不可预测性"实为模式切换的结果**：模型揭示了这种看似随机的电量变化背后的物理规律
+
+综上所述，本模型的准线性放电曲线验证了Zenodo OCV多项式的真实性，更重要的是，它为理解现实中"电量消耗时快时慢"的现象提供了合理的科学解释。
 
 ## 6.3 Drivers of Rapid Battery Drain (from Zenodo Analysis)
 
