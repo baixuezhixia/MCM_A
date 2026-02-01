@@ -276,6 +276,12 @@ where $S \in [0,1]$ is normalized signal strength. With $P_{base}$ = 200 mW and 
 
 # 4. Model Development
 
+Figure 1 illustrates our model architecture, showing how data-driven inputs (AndroWatts/Zenodo power measurements and Mendeley degradation data) flow through component loads, battery state modeling, and thermal management to produce time-to-empty predictions for various usage modes.
+
+![Model Architecture Overview](pictures/flowimage.png)
+
+**Figure 1**: Model architecture flowchart showing the integration of data-driven inputs, usage modes, component loads, battery state dynamics, and BMS/thermal management to predict time-to-empty under various scenarios.
+
 ## 4.1 Battery Fundamentals
 
 The state of charge (SOC) represents the remaining energy in the battery as a fraction of its full capacity:
