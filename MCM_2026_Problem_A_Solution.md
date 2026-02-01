@@ -39,7 +39,7 @@ where $E_{effective} = V_{nominal} \cdot Q_{effective}$ is the energy capacity (
    - 3.1 Detailed Assumption Derivations and Validation
 4. [Model Development](#4-model-development)
    - 4.1 Battery Fundamentals
-   - 4.2 SOC-Dependent Voltage Model
+   - 4.2 Open-Circuit Voltage (OCV) Model
    - 4.3 Power Consumption Model (Data-Driven)
    - 4.4 Temperature Effects with Thermal Management
    - 4.5 Battery Aging Model (Data-Driven)
@@ -966,12 +966,13 @@ To extend battery lifespan:
 
 | Aspect | Previous Model | Current Model (Data-Driven) |
 |--------|---------------|---------------|
+| SOC definition | Charge ratio (Q/Q_total) | **Energy ratio (E/E_total)** |
 | Power parameters | Linear assumptions | Empirical from AndroWatts |
 | Brightness model | Linear: $P \propto B$ | Non-linear: ~3.3× increase low→max |
 | CPU model | Fixed values | $P \propto f^{1.45}$ (fitted) |
 | Component breakdown | Estimated (CPU 70%) | Measured: CPU 42.4%, Display 11.8% |
-| Voltage | Constant 3.45V | V(SOC) = 3.0-4.2V |
-| OCV(SOC) | Generic curve | Aging-specific polynomials (Mendeley) |
+| SOC calculation | Uses V(SOC) × Q | **Uses V_nominal × Q (energy-based)** |
+| OCV model | Generic curve | Aging-specific polynomials (for display) |
 | Capacity fade | 0.29%/cycle (NASA) | 0.08%/cycle (cross-validated) |
 | Shutdown SOC | 0% (1%) | 5% (BMS) |
 
@@ -983,13 +984,14 @@ We developed a **data-driven continuous-time mathematical model** for smartphone
 
 **Key features:**
 
-1. **Empirical power relationships**: Component power proportions derived from 1,000 real device tests
-2. **Non-linear brightness-power relationship**: Display power increases ~3.3× from minimum to maximum brightness
-3. **Frequency-power law**: CPU power scales as $f^{1.45}$
-4. **SOC-dependent voltage** (4.2V → 3.0V) for accurate discharge modeling
-5. **BMS constraints** (5% shutdown, power limiting)
-6. **Thermal throttling** for realistic gaming/heavy-use scenarios
-7. **Aging-specific OCV curves** from measured degradation data
+1. **Energy-based SOC definition**: SOC = E_remaining/E_total using V_nominal (constant)
+2. **Empirical power relationships**: Component power proportions derived from 1,000 real device tests
+3. **Non-linear brightness-power relationship**: Display power increases ~3.3× from minimum to maximum brightness
+4. **Frequency-power law**: CPU power scales as $f^{1.45}$
+5. **OCV model for voltage display**: V(SOC): 4.2V → 3.0V (not used for SOC calculation)
+6. **BMS constraints** (5% shutdown, power limiting)
+7. **Thermal throttling** for realistic gaming/heavy-use scenarios
+8. **Aging-specific OCV curves** from measured degradation data
 
 **Data-driven findings:**
 
@@ -1139,14 +1141,15 @@ The model parameters are derived from two real-world datasets located in `reques
 
 | Issue | Previous Model | Current Model (Data-Driven) |
 |-------|---------------|---------------|
+| SOC definition | Charge ratio (Q/Q_total) | **Energy ratio (E/E_total)** |
 | Data utilization | Subset analysis | **Full 36,000 rows for aging analysis** |
 | Power model source | Linear assumptions | AndroWatts dataset (1,000 tests) |
 | Brightness-power | Linear: $P \propto B$ | Empirical: $P = 117.35B + 3018$ |
 | CPU-frequency | Assumed | Fitted: $P \propto f^{1.45}$ |
 | Component breakdown | Estimated (CPU 70%) | Measured: CPU 42.4%, Display 11.8% |
 | Battery life analysis | Theoretical | **Empirical: 36,000 samples** |
-| Voltage constant | 3.45V always | V(SOC) = 3.0 + 1.2×SOC^0.85 |
-| OCV(SOC) curve | Generic | Aging-specific (Mendeley data) |
+| SOC calculation | V(SOC) × Q (varying) | **V_nominal × Q (constant, energy-based)** |
+| OCV(SOC) curve | Generic | Aging-specific (for display only) |
 | Capacity fade | 0.29%/cycle (NASA 1C) | 0.08%/cycle (cross-validated) |
 | BMS shutdown | 0% or 1% | 5% (realistic) |
 | Thermal feedback | None | Throttling at 70%+ load |
