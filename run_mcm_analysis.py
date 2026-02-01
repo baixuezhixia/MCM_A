@@ -25,11 +25,6 @@ from dataclasses import dataclass, asdict
 from typing import Dict, List, Tuple, Optional
 import os
 
-# Configure matplotlib to use mathtext for Unicode symbols
-# This ensures proper rendering of special characters like ∝, °, ² across platforms
-plt.rcParams['mathtext.fontset'] = 'dejavusans'
-plt.rcParams['font.family'] = 'DejaVu Sans'
-
 # Constants
 FIGURES_DIR = "pictures"
 RESULTS_FILE = "mcm_results.json"
@@ -558,6 +553,11 @@ def generate_figures(model: ZenodoBasedSOCModel, r2_results: dict,
     """Generate visualization figures"""
     os.makedirs(FIGURES_DIR, exist_ok=True)
     
+    # Configure matplotlib to use mathtext for Unicode symbols
+    # This ensures proper rendering of special characters like ∝, °, ² across platforms
+    plt.rcParams['mathtext.fontset'] = 'dejavusans'
+    plt.rcParams['font.family'] = 'DejaVu Sans'
+    
     plt.style.use('seaborn-v0_8-whitegrid')
     
     # Figure 1: Discharge curves with low-SOC zoom inset
@@ -695,7 +695,7 @@ def generate_figures(model: ZenodoBasedSOCModel, r2_results: dict,
     temp_vals = [d['temperature_c'] for d in temp_data]
     tte_vals = [d['time_hours'] for d in temp_data]
     ax.plot(temp_vals, tte_vals, '^-', color='red', linewidth=2, markersize=8)
-    ax.set_xlabel(r'Temperature ($\degree$C)')
+    ax.set_xlabel(r'Temperature ($^\circ$C)')
     ax.set_ylabel('Battery Life (hours)')
     ax.set_title('Temperature Sensitivity')
     ax.axvline(x=25, color='green', linestyle='--', alpha=0.5, label='Optimal')
