@@ -527,10 +527,17 @@ class ZenodoDataAnalyzer:
         # Explode the largest slice
         explode = [0.05 if i == 0 else 0 for i in range(len(labels))]
         
+        # Custom autopct function to hide labels for small slices (< 3%) to prevent overlap
+        def autopct_threshold(pct):
+            return f'{pct:.1f}%' if pct >= 3 else ''
+        
         wedges, texts, autotexts = ax1.pie(
-            sizes, labels=labels, autopct='%1.1f%%', startangle=90,
+            sizes, labels=None, autopct=autopct_threshold, startangle=90,
             colors=colors, explode=explode, pctdistance=0.75
         )
+        # Use legend instead of labels to avoid overlap
+        ax1.legend(wedges, labels, title="Components", loc="center left",
+                   bbox_to_anchor=(-0.3, 0.5), fontsize=8)
         ax1.set_title('Component Power Breakdown (% of Total)')
         
         # Bar chart
