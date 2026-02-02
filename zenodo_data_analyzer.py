@@ -517,9 +517,18 @@ class ZenodoDataAnalyzer:
         labels = list(self.results.component_percentages.keys())
         sizes = [self.results.component_percentages[l] for l in labels]
         
+        # Add "Other" category for missing percentage to ensure total = 100%
+        total_pct = sum(sizes)
+        if total_pct < 100 - 0.01:  # Use tolerance for floating point comparison
+            other_pct = 100 - total_pct
+            labels.append('Other')
+            sizes.append(other_pct)
+        
         # Sort by size
         sorted_data = sorted(zip(labels, sizes), key=lambda x: -x[1])
         labels, sizes = zip(*sorted_data)
+        labels = list(labels)
+        sizes = list(sizes)
         
         # Colors
         colors = plt.cm.Set3(np.linspace(0, 1, len(labels)))
@@ -527,8 +536,16 @@ class ZenodoDataAnalyzer:
         # Explode the largest slice
         explode = [0.05 if i == 0 else 0 for i in range(len(labels))]
         
+        # Custom autopct function: only show label if percentage >= threshold to avoid overlapping
+        min_label_pct = 3  # Minimum percentage to display label on pie slice
+        def autopct_func(pct):
+            return f'{pct:.1f}%' if pct >= min_label_pct else ''
+        
+        # Custom label function: only show label if percentage >= threshold
+        display_labels = [l if s >= min_label_pct else '' for l, s in zip(labels, sizes)]
+        
         wedges, texts, autotexts = ax1.pie(
-            sizes, labels=labels, autopct='%1.1f%%', startangle=90,
+            sizes, labels=display_labels, autopct=autopct_func, startangle=90,
             colors=colors, explode=explode, pctdistance=0.75
         )
         ax1.set_title('Component Power Breakdown (% of Total)')
