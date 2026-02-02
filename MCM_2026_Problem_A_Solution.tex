@@ -129,48 +129,20 @@ XXXXXX}\label{team-control-number-xxxxxx}}
 \hypertarget{summary-sheet}{%
 \section{Summary Sheet}\label{summary-sheet}}
 
-This paper presents a \textbf{data-driven continuous-time mathematical
-model} for predicting smartphone battery state of charge (SOC) and
-time-to-empty under realistic usage conditions. Our approach combines
-electrochemical principles of lithium-ion batteries with
-\textbf{empirical power consumption relationships derived from
-real-world measurements} (AndroWatts dataset {[}17{]}, 1,000 device
-tests) and \textbf{battery aging data} (Mendeley degradation dataset
-{[}18{]}).
+This paper presents a \textbf{data-driven continuous-time mathematical model} for smartphone battery SOC and time-to-empty, combining electrochemical principles with \textbf{empirical power measurements} (AndroWatts {[}17{]}, 1,000 device tests) and \textbf{battery aging data} (Mendeley {[}18{]}).
 
-\textbf{Key Model Features:} 1. \textbf{Energy-based SOC definition}:
-SOC = E\_remaining/E\_total (能量比值), not charge ratio 2.
-\textbf{Data-driven power relationships}: Component power proportions
-and brightness-power correlation derived from 1,000 real device
-measurements 3. \textbf{Empirical brightness-power relationship}: Linear
-fit with \(R^2 = 0.44\), showing brightness explains \textasciitilde44\%
-of display power variance; remaining variance due to content, display
-technology, etc. 4. \textbf{Frequency-power law}: CPU power follows
-\(P_{CPU} \propto f^{1.45}\) (fitted from real data, consistent with
-DVFS behavior) 5. \textbf{OCV model for voltage display}: V(SOC):
-4.2V→3.0V with aging-specific OCV(SOC) polynomials (for terminal
-voltage, not SOC calculation) 6. \textbf{Battery Management System
-(BMS)} constraints: 5\% shutdown threshold, power limiting 7.
-\textbf{Thermal-power feedback loop}: processor throttling under
-sustained load
+\textbf{Key Features:}
+\begin{itemize}
+\tightlist
+\item Energy-based SOC: $SOC = E_{remaining}/E_{total}$
+\item Data-driven power models: Display ($R^2=0.44$), CPU ($P \propto f^{1.45}$)
+\item Component breakdown: CPU 42.4\%, Display 11.8\%, Network 9.2\%
+\item BMS constraints: 5\% shutdown, thermal throttling
+\end{itemize}
 
-\textbf{Data-Driven Findings (from AndroWatts):} - CPU is the dominant
-power consumer (\textbf{42.4\%} of total), followed by Display
-(\textbf{11.8\%}) and Network (\textbf{9.2\%}) - Display power increases
-\textbf{\textasciitilde3.3× from low to max brightness} (linear
-relationship, significant variance) - CPU power scales with
-frequency\^{}1.45, consistent with DVFS behavior
+\textbf{Model Equation:} $\frac{dSOC}{dt} = -\frac{P_{total}(t)}{E_{effective}(T, n)} - k_{self} \cdot SOC$
 
-\textbf{Model Equation (Energy-Based SOC):}
-\[\frac{dSOC}{dt} = -\frac{P_{total}(t)}{E_{effective}(T, n)} - k_{self} \cdot SOC\]
-
-where \(E_{effective} = V_{nominal} \cdot Q_{effective}\) is the energy
-capacity (Wh), ensuring SOC is defined as an energy ratio
-(能量比值，不是电荷比值).
-
-\textbf{Keywords:} Lithium-ion battery, State of charge, Continuous-time
-model, Power consumption, Smartphone, Data-driven modeling, AndroWatts,
-Battery aging
+\textbf{Keywords:} Li-ion battery, SOC, Continuous-time model, Smartphone, Data-driven, AndroWatts
 
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
@@ -262,93 +234,29 @@ users and OS developers \\
 \hypertarget{dataset-usage-strategy}{%
 \subsection{2.1 Dataset Usage Strategy}\label{dataset-usage-strategy}}
 
-We have access to \textbf{two primary datasets}, each serving distinct
-purposes:
-
-\hypertarget{androwatts-mendeley-combined-dataset-primary-for-r1-r2-r4}{%
-\subsubsection{AndroWatts + Mendeley Combined Dataset (Primary for R1,
-R2,
-R4)}\label{androwatts-mendeley-combined-dataset-primary-for-r1-r2-r4}}
-
+\textbf{Primary Dataset}: AndroWatts + Mendeley Combined (36,000 rows = 1,000 tests × 36 aging states) {[}17{]}{[}18{]}
 \begin{itemize}
 \tightlist
-\item
-  \textbf{Location}: \texttt{requests/Zenodo\ Data\ Set/}
-\item
-  \textbf{Content}: 36,000 rows = 1,000 smartphone usage tests × 36
-  battery aging states
-\item
-  \textbf{Sources}:
-
-  \begin{itemize}
-  \tightlist
-  \item
-    \textbf{AndroWatts {[}17{]}} (hosted on Zenodo): Real-world
-    smartphone power consumption measurements
-  \item
-    \textbf{Mendeley Battery Degradation {[}18{]}}: Battery aging
-    parameters (SOH, OCV coefficients)
-  \end{itemize}
-\item
-  \textbf{Provides}: Per-component power measurements (CPU, Display,
-  Network, etc.), device state (brightness, frequency, temperature),
-  battery aging parameters, and calculated time-to-empty values
+\item Per-component power measurements (CPU, Display, Network)
+\item Battery aging parameters (SOH, OCV coefficients)
 \end{itemize}
 
-\hypertarget{nasa-battery-data-set-secondary-for-r3-validation}{%
-\subsubsection{NASA Battery Data Set (Secondary, for R3
-validation)}\label{nasa-battery-data-set-secondary-for-r3-validation}}
+\textbf{Secondary Dataset}: NASA Battery Data Set {[}8{]} - Constant-current discharge for R3 validation
 
-\begin{itemize}
-\tightlist
-\item
-  \textbf{Location}: \texttt{requests/5.\ Battery\ Data\ Set/}
-\item
-  \textbf{Content}: Constant-current (1C) discharge cycling data for 36
-  Li-ion batteries
-\item
-  \textbf{Provides}: Baseline capacity fade rate (0.29\%/cycle), OCV-SOC
-  reference curves, long-term aging patterns
-\end{itemize}
-
-\hypertarget{dataset-assignment-to-requirements}{%
-\subsubsection{Dataset Assignment to
-Requirements}\label{dataset-assignment-to-requirements}}
-
-\begin{longtable}[]{@{}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 6\tabcolsep) * \real{0.2167}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 6\tabcolsep) * \real{0.2833}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 6\tabcolsep) * \real{0.3167}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 6\tabcolsep) * \real{0.1833}}@{}}
+\begin{longtable}[]{@{}lll@{}}
 \toprule\noalign{}
-\begin{minipage}[b]{\linewidth}\raggedright
-Requirement
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-Primary Dataset
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-Secondary Dataset
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-Rationale
-\end{minipage} \\
+Requirement & Primary Dataset & Rationale \\
 \midrule\noalign{}
 \endhead
 \bottomrule\noalign{}
 \endlastfoot
-\textbf{R1: Model} & \textbf{AndroWatts {[}17{]}} & NASA (adapted) &
-Model parameters from real smartphone measurements \\
-\textbf{R2: Predictions} & \textbf{AndroWatts + Mendeley} & - & 36,000
-samples provide direct validation \\
-\textbf{R3: Sensitivity} & AndroWatts + NASA & - & AndroWatts for power,
-NASA for aging baseline \\
-\textbf{R4: Recommendations} & \textbf{AndroWatts {[}17{]}} & - &
-Component power breakdown guides advice \\
+R1: Model & AndroWatts & Real smartphone measurements \\
+R2: Predictions & AndroWatts + Mendeley & 36,000 validation samples \\
+R3: Sensitivity & AndroWatts + NASA & NASA for aging baseline \\
+R4: Recommendations & AndroWatts & Component power breakdown \\
 \end{longtable}
 
-\textbf{Critical insight}: NASA data uses constant-current discharge
-(lab conditions), while AndroWatts uses variable-power discharge (real
-smartphone usage). Parameters from NASA must be \textbf{adapted} (e.g.,
-0.29\%/cycle → 0.08\%/cycle capacity fade) before application to
-smartphone models.
+\textbf{Note}: NASA parameters adapted for smartphones (0.29\%→0.08\%/cycle capacity fade).
 
 \hypertarget{model-requirements}{%
 \subsection{2.2 Model Requirements}\label{model-requirements}}
@@ -881,269 +789,43 @@ minutes
 \section{5. Model Implementation and
 Validation}\label{model-implementation-and-validation}}
 
-This section addresses \textbf{Requirement R1} (Continuous-Time Model)
-and provides validation for \textbf{R2} (Time-to-Empty Predictions).
-
 \hypertarget{numerical-implementation}{%
-\subsection{5.1 Numerical
-Implementation}\label{numerical-implementation}}
+\subsection{5.1 Numerical Implementation}\label{numerical-implementation}}
 
-The model was implemented in Python using the
-\texttt{scipy.integrate.solve\_ivp} function with the RK45 (Runge-Kutta
-4th/5th order) method for numerical integration of the governing ODE.
+Implemented in Python using \texttt{scipy.integrate.solve\_ivp} (RK45 method). The core equation uses energy capacity $E_{eff} = V_{nominal} \cdot Q_{eff}$ to ensure SOC is defined as an energy ratio.
 
-\begin{Shaded}
-\begin{Highlighting}[]
-\KeywordTok{def}\NormalTok{ soc\_derivative(t, SOC, usage\_func):}
-    \CommentTok{\# Calculate power consumption (W)}
-\NormalTok{    P\_total }\OperatorTok{=}\NormalTok{ calculate\_power\_consumption(usage\_func(t), duration}\OperatorTok{=}\NormalTok{t)}
-    \CommentTok{\# Get effective energy capacity (Wh) using V\_nominal for energy{-}based SOC}
-\NormalTok{    E\_eff }\OperatorTok{=}\NormalTok{ get\_effective\_energy\_capacity(temperature, cycles)  }\CommentTok{\# V\_nominal * Q\_eff}
-    \CommentTok{\# Energy{-}based discharge rate: dSOC/dt = {-}P/E}
-\NormalTok{    discharge\_rate }\OperatorTok{=} \OperatorTok{{-}}\NormalTok{P\_total }\OperatorTok{/}\NormalTok{ E\_eff}
-\NormalTok{    self\_discharge }\OperatorTok{=} \OperatorTok{{-}}\NormalTok{k\_self }\OperatorTok{*}\NormalTok{ SOC}
-    \ControlFlowTok{return}\NormalTok{ discharge\_rate }\OperatorTok{+}\NormalTok{ self\_discharge}
-\end{Highlighting}
-\end{Shaded}
+\hypertarget{androwatts-dataset-analysis}{%
+\subsection{5.2 AndroWatts Dataset Analysis}\label{androwatts-dataset-analysis}}
 
-\textbf{Note}: The formula uses energy capacity
-\(E_{eff} = V_{nominal} \cdot Q_{eff}\) (Wh) instead of
-\(V(SOC) \cdot Q_{eff}\) to ensure SOC is consistently defined as an
-energy ratio (能量比值).
+\textbf{Dataset}: 36,000 rows (1,000 tests × 36 battery states), 93 columns of real perfetto power traces {[}17{]}{[}18{]}.
 
-\hypertarget{primary-data-source-androwatts-dataset-analysis}{%
-\subsection{5.2 Primary Data Source: AndroWatts Dataset
-Analysis}\label{primary-data-source-androwatts-dataset-analysis}}
-
-\textbf{For Requirements R1, R2, R4}: We use the AndroWatts dataset
-{[}17{]} (combined with Mendeley aging data {[}18{]}) as the primary
-data source because it contains \textbf{real smartphone power
-consumption measurements}.
-
-\hypertarget{combined-dataset-structure}{%
-\subsubsection{Combined Dataset
-Structure}\label{combined-dataset-structure}}
-
-\begin{longtable}[]{@{}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.2759}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.2414}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.4828}}@{}}
-\toprule\noalign{}
-\begin{minipage}[b]{\linewidth}\raggedright
-Aspect
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-Value
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-Significance
-\end{minipage} \\
-\midrule\noalign{}
-\endhead
-\bottomrule\noalign{}
-\endlastfoot
-Total samples & \textbf{36,000 rows} & 1,000 usage tests × 36 battery
-states \\
-Features & \textbf{93 columns} & Per-component power, device state,
-battery params \\
-Power measurements & Real perfetto traces & Not assumptions or lab
-approximations \\
-Battery aging & 6 aging levels & new → EOL (SOH 1.0 → 0.63) \\
-\end{longtable}
-
-\hypertarget{power-model-parameters-from-androwatts}{%
-\subsubsection{Power Model Parameters (from
-AndroWatts)}\label{power-model-parameters-from-androwatts}}
-
-All power consumption parameters in our model are derived from
-AndroWatts data analysis (\texttt{zenodo\_data\_analyzer.py}):
-
-\begin{longtable}[]{@{}llll@{}}
-\toprule\noalign{}
-Parameter & AndroWatts Value & R² & Usage in Model \\
-\midrule\noalign{}
-\endhead
-\bottomrule\noalign{}
-\endlastfoot
-Display power slope & 117.35 mW/brightness & 0.44 &
-\(P_{display}(B)\) \\
-Display power intercept & 3018 mW & - & Baseline \\
-CPU frequency exponent & 1.45 & 0.56 & \(P_{CPU} \propto f^{1.45}\) \\
-CPU power share & 42.4\% & - & Component breakdown \\
-Display power share & 11.8\% & - & Component breakdown \\
-Network power share & 9.0\% & - & Component breakdown \\
-\end{longtable}
-
-\hypertarget{time-to-empty-validation-from-36000-samples}{%
-\subsubsection{Time-to-Empty Validation (from 36,000
-samples)}\label{time-to-empty-validation-from-36000-samples}}
-
-The combined dataset provides direct validation through
-\textbf{calculated t\_empty\_h\_est} values:
-
-\begin{longtable}[]{@{}llll@{}}
-\toprule\noalign{}
-Battery State & Mean t\_empty (h) & Samples & SOH \\
-\midrule\noalign{}
-\endhead
-\bottomrule\noalign{}
-\endlastfoot
-New & \textbf{14.18} & 6,000 & 1.00 \\
-Slight & 13.47 & 6,000 & 0.95 \\
-Moderate & 12.76 & 6,000 & 0.90 \\
-Aged & 12.07 & 6,000 & 0.85 \\
-Old & 11.35 & 6,000 & 0.80 \\
-EOL & \textbf{10.77} & 6,000 & 0.70 \\
-\end{longtable}
-
-\begin{figure}
-\centering
-\includegraphics{pictures/zenodo_battery_life_vs_aging.png}
-\caption{Battery Life vs Aging}
-\end{figure}
-
-\textbf{Key finding}: Battery life decreases \textbf{24\%} from new to
-EOL, which is less than the 30\% SOH reduction, indicating the
-non-linear relationship between capacity and usable battery life.
-
-\hypertarget{secondary-data-source-nasa-battery-data-set}{%
-\subsection{5.3 Secondary Data Source: NASA Battery Data
-Set}\label{secondary-data-source-nasa-battery-data-set}}
-
-\textbf{For Requirement R3 (Sensitivity Analysis)}: NASA data provides
-baseline aging parameters for comparison and validation.
-
-\hypertarget{nasa-dataset-observations}{%
-\subsubsection{NASA Dataset
-Observations}\label{nasa-dataset-observations}}
-
+\textbf{Derived Parameters}:
 \begin{itemize}
 \tightlist
-\item
-  \textbf{36 batteries} analyzed (B0005-B0056) from 38 total files
-\item
-  \textbf{Discharge mode}: Constant-current 2A (1C rate)
-\item
-  \textbf{Capacity fade}: 0.2783\%/cycle average
+\item Display: $P = 117.35B + 3018$ mW ($R^2=0.44$)
+\item CPU: $P \propto f^{1.45}$ ($R^2=0.56$)
+\item Component breakdown: CPU 42.4\%, Display 11.8\%, Network 9.0\%
 \end{itemize}
 
-\hypertarget{why-nasa-data-cannot-be-used-directly-for-r1r2}{%
-\subsubsection{Why NASA Data Cannot Be Used Directly for
-R1/R2}\label{why-nasa-data-cannot-be-used-directly-for-r1r2}}
-
-\begin{longtable}[]{@{}lll@{}}
-\toprule\noalign{}
-Factor & NASA Test & Smartphone Reality (AndroWatts) \\
-\midrule\noalign{}
-\endhead
-\bottomrule\noalign{}
-\endlastfoot
-Discharge mode & Constant 2A (1C) & Variable 0.3-3A \\
-Thermal management & None (bare cell) & Active cooling \\
-BMS protection & None & Shutdown at 5\% \\
-Usage patterns & Lab controlled & Real-world varied \\
-\end{longtable}
-
-\hypertarget{adapted-parameters-for-smartphone-model}{%
-\subsubsection{Adapted Parameters for Smartphone
-Model}\label{adapted-parameters-for-smartphone-model}}
-
-NASA data is used to \textbf{validate and cross-reference} our
-AndroWatts-derived parameters:
-
-\begin{longtable}[]{@{}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 6\tabcolsep) * \real{0.1803}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 6\tabcolsep) * \real{0.1639}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 6\tabcolsep) * \real{0.3115}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 6\tabcolsep) * \real{0.3443}}@{}}
-\toprule\noalign{}
-\begin{minipage}[b]{\linewidth}\raggedright
-Parameter
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-NASA Raw
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-AndroWatts/Adapted
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-Adaptation Rationale
-\end{minipage} \\
-\midrule\noalign{}
-\endhead
-\bottomrule\noalign{}
-\endlastfoot
-Capacity fade & 0.29\%/cycle & \textbf{0.08\%/cycle} & Variable power
-reduces stress \\
-Cold effect & -35\% at -10°C & \textbf{-27\%} & Phone casing
-insulation \\
-OCV coefficients & Direct measurement & Mendeley data {[}18{]} &
-Age-specific polynomials \\
-\end{longtable}
-
-\begin{figure}
-\centering
-\includegraphics{pictures/nasa_capacity_fade.png}
-\caption{NASA Capacity Fade}
-\end{figure}
+\textbf{Validation}: Battery life decreases 24\% from new to EOL (less than 30\% SOH reduction).
 
 \hypertarget{model-validation-summary}{%
-\subsection{5.4 Model Validation
-Summary}\label{model-validation-summary}}
-
-Our model, primarily parameterized from AndroWatts data, produces
-predictions matching real-world observations:
+\subsection{5.3 Model Validation Summary}\label{model-validation-summary}}
 
 \begin{longtable}[]{@{}llll@{}}
 \toprule\noalign{}
-Scenario & Model Prediction & Real-World Typical & Match \\
+Scenario & Model & Real-World & Match \\
 \midrule\noalign{}
 \endhead
 \bottomrule\noalign{}
 \endlastfoot
-Gaming & \textbf{4.4 hours} & 4-6 hours & ✓ \\
-Video streaming (heavy) & 6.0 hours & 5-7 hours & ✓ \\
-Navigation & 6.5 hours & 4-6 hours & ✓ \\
-Light use & 18.2 hours & 15-18 hours & ✓ \\
-Idle & 48.6 hours & 24-48 hours & ✓ \\
+Gaming & 4.4h & 4-6h & ✓ \\
+Video & 6.0h & 5-7h & ✓ \\
+Light & 18.2h & 15-18h & ✓ \\
+Idle & 48.6h & 24-48h & ✓ \\
 \end{longtable}
 
-\textbf{Model validation}: The predictions above are generated by
-\texttt{run\_mcm\_analysis.py} using AndroWatts-derived parameters (see
-Section 6.1). All predictions fall within real-world expected ranges,
-demonstrating that our data-driven approach produces realistic
-estimates. The inclusion of thermal throttling (Section 4.4) is
-essential for accurate gaming predictions---without it, the model would
-underestimate battery life during sustained high-power activities.
-
-\hypertarget{updated-parameter-table}{%
-\subsection{5.5 Updated Parameter Table}\label{updated-parameter-table}}
-
-\begin{longtable}[]{@{}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.2683}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.2683}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.4634}}@{}}
-\toprule\noalign{}
-\begin{minipage}[b]{\linewidth}\raggedright
-Parameter
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-Our Value
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-Validation Source
-\end{minipage} \\
-\midrule\noalign{}
-\endhead
-\bottomrule\noalign{}
-\endlastfoot
-Battery Capacity & \textbf{4500 mAh} & See Section 3.1 A6; Apple
-{[}15{]}, Samsung {[}10{]} specs \\
-Voltage & \textbf{3.0-4.2 V (SOC-dependent)} & See Section 3.1 A1;
-Mendeley OCV polynomial {[}18{]}; Rahmani \& Benbouzid {[}5{]} \\
-Capacity fade & \textbf{0.08\%/cycle} & See Section 4.5; Apple {[}6{]},
-Samsung reports; Battery University {[}2{]} \\
-BMS shutdown & \textbf{5\% SOC} & See Section 3.1 A2; Apple {[}6{]},
-Samsung {[}10{]} specs \\
-Screen Power & 125-375 mW & See Section 4.3 Screen Power Model;
-AndroWatts dataset {[}17{]} \\
-CPU Power & 80-4000 mW (sustained: 2500) & See Section 3.1 A3, Section
-4.4; AnandTech {[}11{]}, Qualcomm {[}12{]} \\
-GPS Power & 350 mW & See Section 3.1 A7; Carroll \& Heiser {[}3{]} \\
-\end{longtable}
+\textbf{Note}: NASA data {[}8{]} validates R3; parameters adapted (0.29\%→0.08\%/cycle fade, -35\%→-27\% cold effect).
 
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
@@ -1220,43 +902,13 @@ SOC with constant power consumption.
 \subsubsection{Why Discharge Curves Are
 Linear}\label{why-discharge-curves-are-linear}}
 
-With energy-based SOC definition (\(SOC = E_{remaining}/E_{total}\)),
-the discharge rate is:
+With energy-based SOC: $\frac{dSOC}{dt} = -\frac{P}{V_{nominal} \cdot Q_{total}}$. Since $V_{nominal} = 3.7V$ and $Q_{total}$ are constant, and power P is constant for a fixed scenario, discharge curves are \textbf{linear}.
 
-\[\frac{dSOC}{dt} = -\frac{P}{E_{total}} = -\frac{P}{V_{nominal} \cdot Q_{total}}\]
+\textbf{Discharge Rate by Scenario} ($E_{eff} = 3.7V \times 4500mAh = 16.65Wh$):
 
-Since both \(V_{nominal} = 3.7V\) (constant) and \(Q_{total}\) (constant
-for a given battery state) are constant during discharge, and power
-consumption P remains approximately constant for a fixed usage scenario,
-the discharge rate is \textbf{constant}. This results in \textbf{linear
-discharge curves}, which is physically correct for energy-based SOC.
-
-\textbf{Note}: The OCV (Open-Circuit Voltage) still varies with SOC (see
-Section 4.2), but this does not affect the SOC calculation. The OCV is
-only used for terminal voltage display and BMS operations.
-
-\hypertarget{model-scope-and-applicability}{%
-\subsubsection{Model Scope and
-Applicability}\label{model-scope-and-applicability}}
-
-Our model predicts \textbf{discharge rate given a specific usage
-scenario}:
-
-\begin{longtable}[]{@{}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 6\tabcolsep) * \real{0.1471}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 6\tabcolsep) * \real{0.1765}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 6\tabcolsep) * \real{0.3088}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 6\tabcolsep) * \real{0.3676}}@{}}
+\begin{longtable}[]{@{}llll@{}}
 \toprule\noalign{}
-\begin{minipage}[b]{\linewidth}\raggedright
-Scenario
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-Power (mW)
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-Discharge Rate (\%/h)
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-Time to Empty (100\%→3\%)
-\end{minipage} \\
+Scenario & Power (mW) & Rate (\%/h) & Time to Empty \\
 \midrule\noalign{}
 \endhead
 \bottomrule\noalign{}
@@ -1268,83 +920,7 @@ Heavy & 2697 & \textasciitilde16.2 & \textasciitilde6h \\
 Gaming & 3670 & \textasciitilde22.0 & \textasciitilde4.4h \\
 \end{longtable}
 
-\textbf{Calculation basis}:
-\(E_{eff} = V_{nominal} \cdot Q_{eff} = 3.7V \times 4500mAh = 16.65Wh\)
-
-\textbf{What the model answers}: ``If the user remains in scenario X,
-how fast will SOC decrease?''
-
-\textbf{What the model does NOT predict}: ``How long will the phone last
-today?'' --- This depends on the user's actual usage pattern, which is
-fundamentally unpredictable.
-
-\hypertarget{why-users-perceive-battery-drain-as-unpredictable}{%
-\subsubsection{Why Users Perceive Battery Drain as
-``Unpredictable''}\label{why-users-perceive-battery-drain-as-unpredictable}}
-
-The linear discharge curves above represent battery consumption under
-\textbf{single usage modes}. However, in reality, users frequently
-switch between different modes, causing the discharge curve slope to
-change abruptly.
-
-\textbf{Illustrative Example} (not a model prediction):
-
-\begin{figure}
-\centering
-\includegraphics{pictures/scenario_switching_discharge.png}
-\caption{Scenario Switching Example}
-\end{figure}
-
-\emph{Note: The figure above is an illustrative example showing how
-typical user behavior (mode switching) affects discharge patterns. The
-specific schedule (e.g., ``gaming 1.5h → idle 0.5h'') is hypothetical
---- actual user behavior varies unpredictably.}
-
-\textbf{Key observations from the example}:
-
-\begin{enumerate}
-\def\labelenumi{\arabic{enumi}.}
-\tightlist
-\item
-  \textbf{Within each segment}: Discharge is linear (constant power →
-  constant slope)
-\item
-  \textbf{At mode transitions}: Slope changes abruptly (power jumps from
-  334mW to 3670mW = 11× difference)
-\item
-  \textbf{Overall curve}: Appears ``piecewise linear'' --- each segment
-  is straight, but slopes differ
-\end{enumerate}
-
-\textbf{The true source of perceived ``unpredictability''}: - It is NOT
-the battery's electrochemical nonlinearity (OCV is separate from SOC
-calculation) - It IS the user's mode switching behavior (power varies up
-to 11×)
-
-\hypertarget{models-explanatory-value}{%
-\subsubsection{Model's Explanatory
-Value}\label{models-explanatory-value}}
-
-By quantifying power consumption differences across scenarios, our model
-explains:
-
-\begin{enumerate}
-\def\labelenumi{\arabic{enumi}.}
-\tightlist
-\item
-  \textbf{Why battery drains faster during gaming}: 3670mW vs 334mW idle
-  = 11× power difference
-\item
-  \textbf{Why discharge ``accelerates'' suddenly}: User switched from
-  light use to heavy use
-\item
-  \textbf{Why battery ``lasts longer than expected''}: User was mostly
-  idle or in light-use mode
-\end{enumerate}
-
-The model provides a rational physical basis for understanding battery
-behavior, even though it cannot predict the unpredictable (user behavior
-patterns).
+\textbf{Why users perceive ``unpredictable'' drain}: Users switch modes frequently (e.g., gaming→idle), causing slope changes up to 11×. The model explains: (1) gaming drains 11× faster than idle, (2) sudden ``acceleration'' = mode switch, (3) ``longer than expected'' = mostly light use.
 
 \hypertarget{drivers-of-rapid-battery-drain-from-androwatts-analysis}{%
 \subsection{6.3 Drivers of Rapid Battery Drain (from AndroWatts
@@ -1435,9 +1011,8 @@ and usage patterns.
 \textbf{Results generated by \texttt{run\_mcm\_analysis.py} using
 AndroWatts-derived parameters.}
 
-\hypertarget{parameter-sensitivity-from-run_mcm_analysis.py}{%
-\subsection{7.1 Parameter Sensitivity (from
-run\_mcm\_analysis.py)}\label{parameter-sensitivity-from-run_mcm_analysis.py}}
+\hypertarget{parameter-sensitivity}{%
+\subsection{7.1 Parameter Sensitivity}\label{parameter-sensitivity}}
 
 \begin{figure}
 \centering
@@ -1445,125 +1020,33 @@ run\_mcm\_analysis.py)}\label{parameter-sensitivity-from-run_mcm_analysis.py}}
 \caption{Sensitivity Analysis}
 \end{figure}
 
-\hypertarget{brightness-sensitivity-using-androwatts-brightness-power-model}{%
-\subsubsection{Brightness Sensitivity (using AndroWatts brightness-power
-model)}\label{brightness-sensitivity-using-androwatts-brightness-power-model}}
+\textbf{Brightness} (Baseline: 1,539mW, 10.55h): 10\% brightness → +18.1\%; 100\% → -16.0\%
 
-Baseline: Power=1,539mW, Time-to-empty=10.55h
+\textbf{CPU Load} (strongest impact): 10\% → +68.1\%; 90\% → -58.7\%
 
-\begin{longtable}[]{@{}llll@{}}
-\toprule\noalign{}
-Brightness & Power (mW) & Time (h) & Change \\
-\midrule\noalign{}
-\endhead
-\bottomrule\noalign{}
-\endlastfoot
-10\% & 1,304 & 12.46 & \textbf{+18.1\%} \\
-30\% & 1,421 & 11.42 & +8.2\% \\
-50\% & 1,539 & 10.55 & 0\% \\
-70\% & 1,656 & 9.81 & -7.1\% \\
-100\% & 1,832 & 8.86 & \textbf{-16.0\%} \\
-\end{longtable}
+\hypertarget{temperature-sensitivity}{%
+\subsection{7.2 Temperature Sensitivity}\label{temperature-sensitivity}}
 
-\hypertarget{cpu-load-sensitivity-using-androwatts-exponent1.45}{%
-\subsubsection{CPU Load Sensitivity (using AndroWatts
-exponent=1.45)}\label{cpu-load-sensitivity-using-androwatts-exponent1.45}}
+Cold temperatures significantly impact battery: -10°C → -25\%; Hot temperatures moderated: 45°C → -4\%.
 
-\begin{longtable}[]{@{}llll@{}}
-\toprule\noalign{}
-CPU Load & Power (mW) & Time (h) & Change \\
-\midrule\noalign{}
-\endhead
-\bottomrule\noalign{}
-\endlastfoot
-10\% & 915 & 17.74 & \textbf{+68.1\%} \\
-30\% & 1,389 & 11.69 & +10.7\% \\
-50\% & 2,044 & 7.94 & -24.7\% \\
-70\% & 2,831 & 5.73 & -45.7\% \\
-90\% & 3,729 & 4.36 & \textbf{-58.7\%} \\
-\end{longtable}
+\hypertarget{aging-sensitivity}{%
+\subsection{7.3 Aging Sensitivity}\label{aging-sensitivity}}
 
-\textbf{Key finding}: CPU load has the strongest impact on battery life,
-with reduction from 90\% to 10\% load providing \textbf{+68\% battery
-life improvement}.
+Battery life decreases 24\% (new→EOL) while SOH decreases 30\%, showing non-linear relationship. Model pattern matches dataset.
 
-\hypertarget{temperature-sensitivity-from-run_mcm_analysis.py}{%
-\subsection{7.2 Temperature Sensitivity (from
-run\_mcm\_analysis.py)}\label{temperature-sensitivity-from-run_mcm_analysis.py}}
+\hypertarget{assumption-sensitivity}{%
+\subsection{7.4 Assumption Sensitivity}\label{assumption-sensitivity}}
 
 \begin{longtable}[]{@{}lll@{}}
 \toprule\noalign{}
-Temperature & Time (h) & Change from 25°C \\
+Assumption & Change & Impact \\
 \midrule\noalign{}
 \endhead
 \bottomrule\noalign{}
 \endlastfoot
--10°C & 7.91 & \textbf{-25.0\%} \\
-0°C & 8.44 & -20.0\% \\
-15°C & 9.71 & -8.0\% \\
-25°C & 10.55 & 0\% (optimal) \\
-35°C & 10.34 & -2.0\% \\
-45°C & 10.13 & -4.0\% \\
-\end{longtable}
-
-\textbf{Key finding}: Cold temperatures have significant impact (-25\%
-at -10°C), while hot temperatures are moderated by phone thermal
-management (-4\% at 45°C).
-
-\hypertarget{battery-aging-sensitivity-model-vs-dataset-validation}{%
-\subsection{7.3 Battery Aging Sensitivity (Model vs Dataset
-Validation)}\label{battery-aging-sensitivity-model-vs-dataset-validation}}
-
-Comparing model predictions with 36,000-sample dataset:
-
-\begin{longtable}[]{@{}lllll@{}}
-\toprule\noalign{}
-Aging State & SOH & Model (h) & Dataset Mean (h) & Error \\
-\midrule\noalign{}
-\endhead
-\bottomrule\noalign{}
-\endlastfoot
-new & 1.000 & 10.55 & 14.18 & - \\
-slight & 0.950 & 10.02 & 13.47 & - \\
-moderate & 0.900 & 9.50 & 12.76 & - \\
-aged & 0.850 & 8.98 & 12.07 & - \\
-old & 0.800 & 8.44 & 11.35 & - \\
-eol & 0.702 & 7.41 & 10.77 & - \\
-\end{longtable}
-
-\textbf{Note}: Model predicts shorter battery life than dataset mean
-because the baseline power (1,539mW) is higher than average usage. The
-\textbf{relative degradation pattern} (24\% reduction from new to EOL)
-matches between model and data.
-
-\textbf{Key finding}: Battery life decreases 24\% while SOH decreases
-30\%, indicating non-linear relationship.
-
-\hypertarget{model-assumption-sensitivity}{%
-\subsection{7.4 Model Assumption
-Sensitivity}\label{model-assumption-sensitivity}}
-
-\begin{longtable}[]{@{}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3077}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.2051}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.4872}}@{}}
-\toprule\noalign{}
-\begin{minipage}[b]{\linewidth}\raggedright
-Assumption
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-Change
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-Impact on t\_empty
-\end{minipage} \\
-\midrule\noalign{}
-\endhead
-\bottomrule\noalign{}
-\endlastfoot
-BMS shutdown threshold & 5\% → 1\% & +4.2\% (more usable capacity) \\
-Thermal throttling & Enabled → Disabled & -15\% to -30\% (gaming
-scenarios) \\
-Voltage model & Constant → V(SOC) & ±3\% (more realistic at low SOC) \\
-Capacity fade rate & ±50\% & ±10\% at 500 cycles \\
+BMS threshold & 5\%→1\% & +4.2\% \\
+Thermal throttling & On→Off & -15\% to -30\% \\
+Capacity fade & ±50\% & ±10\% at 500 cycles \\
 \end{longtable}
 
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
@@ -1571,177 +1054,54 @@ Capacity fade rate & ±50\% & ±10\% at 500 cycles \\
 \hypertarget{practical-recommendations}{%
 \section{8. Practical Recommendations}\label{practical-recommendations}}
 
-This section addresses \textbf{Requirement R4}: Translating findings
-into practical recommendations for users and OS developers.
+This section addresses \textbf{Requirement R4} based on AndroWatts component power analysis.
 
-\textbf{Primary Data Source}: AndroWatts dataset component power
-breakdown
+\hypertarget{for-smartphone-users}{%
+\subsection{8.1 For Smartphone Users}\label{for-smartphone-users}}
 
-\hypertarget{for-smartphone-users-based-on-androwatts-component-analysis}{%
-\subsection{8.1 For Smartphone Users (Based on AndroWatts Component
-Analysis)}\label{for-smartphone-users-based-on-androwatts-component-analysis}}
+\textbf{High Impact} (CPU = 42.4\% of power):
+\begin{itemize}
+\tightlist
+\item \textbf{Reduce CPU-intensive activities} (+45\%): Close gaming/video apps when not needed
+\item \textbf{Disable GPS when not needed} (+10.1\%): GPS draws ~350 mW
+\item \textbf{Use WiFi over cellular} (+9.1\%): More power-efficient
+\end{itemize}
 
-Based on our analysis of \textbf{1,000 real device measurements} from
-AndroWatts:
+\textbf{Medium Impact} (Display = 11.8\%):
+\begin{itemize}
+\tightlist
+\item \textbf{Reduce brightness} (+40\%): 10\% brightness → 12.46h vs 100\% → 8.86h
+\end{itemize}
 
-\begin{figure}
-\centering
-\includegraphics{pictures/optimization_impact.png}
-\caption{Optimization Impact}
-\end{figure}
+\textbf{Combined optimization}: High use (2,599mW, 6.25h) → Optimized (947mW, 17.14h) = \textbf{+174\%}
 
-\hypertarget{high-impact-10-improvement}{%
-\subsubsection{High Impact (\textgreater{} 10\%
-improvement)}\label{high-impact-10-improvement}}
-
-\textbf{From AndroWatts data}: CPU accounts for \textbf{42.4\%} of total
-power
+\hypertarget{for-os-developers}{%
+\subsection{8.2 For OS Developers}\label{for-os-developers}}
 
 \begin{enumerate}
 \def\labelenumi{\arabic{enumi}.}
 \tightlist
-\item
-  \textbf{Reduce processor-intensive activities} (+45\%):
-
-  \begin{itemize}
-  \tightlist
-  \item
-    Close gaming, video editing apps when not needed
-  \item
-    Data shows CPU frequency directly correlates with power
-    (\(f^{1.45}\))
-  \end{itemize}
-\item
-  \textbf{Disable GPS when not needed} (+10.1\%):
-
-  \begin{itemize}
-  \tightlist
-  \item
-    GPS power is \textasciitilde350 mW but impacts other components
-  \end{itemize}
-\item
-  \textbf{Use WiFi instead of cellular} (+9.1\%):
-
-  \begin{itemize}
-  \tightlist
-  \item
-    From AndroWatts: WLAN/BT accounts for 9.0\% vs.~variable cellular
-  \end{itemize}
+\item \textbf{CPU-First Power Management}: CPU is 42.4\% of power (not screen); 90\%→10\% CPU = +68\% battery
+\item \textbf{Intelligent Brightness}: 100\%→10\% brightness = +40\% battery life
+\item \textbf{Adaptive BMS}: SOH 1.0→0.70 reduces battery life by ~30\%
 \end{enumerate}
 
-\hypertarget{medium-impact}{%
-\subsubsection{Medium Impact}\label{medium-impact}}
+\hypertarget{for-battery-longevity}{%
+\subsection{8.3 For Battery Longevity}\label{for-battery-longevity}}
 
-\textbf{From AndroWatts data}: Display accounts for \textbf{11.8\%} of
-total power
-
-\begin{enumerate}
-\def\labelenumi{\arabic{enumi}.}
-\setcounter{enumi}{3}
-\tightlist
-\item
-  \textbf{Reduce screen brightness} (+16\% at max reduction):
-
-  \begin{itemize}
-  \tightlist
-  \item
-    Model result: 10\% brightness → 12.46h vs 100\% → 8.86h
-  \item
-    40\% improvement in battery life from brightness alone
-  \end{itemize}
-\end{enumerate}
-
-\hypertarget{combined-strategy-from-run_mcm_analysis.py}{%
-\subsubsection{\texorpdfstring{Combined Strategy (from
-\texttt{run\_mcm\_analysis.py}):}{Combined Strategy (from run\_mcm\_analysis.py):}}\label{combined-strategy-from-run_mcm_analysis.py}}
-
-\begin{longtable}[]{@{}llll@{}}
+\begin{longtable}[]{@{}lll@{}}
 \toprule\noalign{}
-Configuration & Power (mW) & Battery Life (h) & Improvement \\
+SOH Level & Battery Life & Action \\
 \midrule\noalign{}
 \endhead
 \bottomrule\noalign{}
 \endlastfoot
-Baseline (high use) & 2,599 & 6.25 & - \\
-Optimized (low use) & 947 & 17.14 & \textbf{+174\%} \\
+1.00 (New) & 10.55 h & Maintain with care \\
+0.80 (Old) & 8.44 h & Consider replacement \\
+0.70 (EOL) & 7.41 h & \textbf{Replace battery} \\
 \end{longtable}
 
-\hypertarget{for-operating-system-developers-informed-by-androwatts-data}{%
-\subsection{8.2 For Operating System Developers (Informed by AndroWatts
-Data)}\label{for-operating-system-developers-informed-by-androwatts-data}}
-
-\begin{enumerate}
-\def\labelenumi{\arabic{enumi}.}
-\tightlist
-\item
-  \textbf{CPU-First Power Management}:
-
-  \begin{itemize}
-  \tightlist
-  \item
-    AndroWatts reveals CPU is \textbf{42.4\%} of power (not screen as
-    often assumed)
-  \item
-    Model shows: 90\%→10\% CPU load = \textbf{+68\% battery life}
-  \item
-    Focus power management on CPU scaling before display dimming
-  \end{itemize}
-\item
-  \textbf{Intelligent Brightness Control}:
-
-  \begin{itemize}
-  \tightlist
-  \item
-    Display is 11.8\% of power
-  \item
-    Model shows: 100\%→10\% brightness = \textbf{+40\% battery life}
-  \item
-    Auto-brightness based on ambient light is effective
-  \end{itemize}
-\item
-  \textbf{Adaptive BMS Shutdown}:
-
-  \begin{itemize}
-  \tightlist
-  \item
-    Consider adjusting shutdown threshold based on usage pattern
-  \item
-    From model: SOH 1.0→0.70 reduces battery life by \textasciitilde30\%
-  \end{itemize}
-\end{enumerate}
-
-\hypertarget{for-battery-longevity-from-model-mendeley-aging-data}{%
-\subsection{8.3 For Battery Longevity (From Model + Mendeley Aging
-Data)}\label{for-battery-longevity-from-model-mendeley-aging-data}}
-
-\textbf{Model predictions for different aging states}:
-
-\begin{longtable}[]{@{}llll@{}}
-\toprule\noalign{}
-SOH Level & Model Prediction & Dataset Mean & Action \\
-\midrule\noalign{}
-\endhead
-\bottomrule\noalign{}
-\endlastfoot
-1.00 (New) & 10.55 h & 14.18 h & Maintain with care \\
-0.90 (Moderate) & 9.50 h & 12.76 h & Normal use OK \\
-0.80 (Old) & 8.44 h & 11.35 h & Consider replacement \\
-0.70 (EOL) & 7.41 h & 10.77 h & \textbf{Replace battery} \\
-\end{longtable}
-
-To extend battery lifespan:
-
-\begin{enumerate}
-\def\labelenumi{\arabic{enumi}.}
-\tightlist
-\item
-  \textbf{Avoid extreme temperatures}: Model shows -25\% capacity at
-  -10°C
-\item
-  \textbf{Reduce high CPU loads}: Sustained high load accelerates aging
-\item
-  \textbf{Partial charge cycles}: 20-80\% charging reduces stress
-\end{enumerate}
+\textbf{Tips}: Avoid extreme temperatures (-25\% at -10°C), reduce sustained high CPU loads, use 20-80\% charge cycles.
 
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
@@ -1751,137 +1111,43 @@ To extend battery lifespan:
 \hypertarget{strengths}{%
 \subsection{9.1 Strengths}\label{strengths}}
 
-\begin{enumerate}
-\def\labelenumi{\arabic{enumi}.}
+\begin{itemize}
 \tightlist
-\item
-  \textbf{Data-driven parameters}: Power consumption derived from 1,000
-  real device measurements (AndroWatts {[}17{]}), not linear
-  approximations
-\item
-  \textbf{Empirical brightness-power relationship}: Display power
-  increases \textasciitilde3.3× from low to max brightness, linear fit
-  from real data (\(R^2 = 0.44\))
-\item
-  \textbf{Validated component breakdown}: CPU (42.4\%), Display
-  (11.8\%), Network (9.2\%) from measured data
-\item
-  \textbf{Aging-specific OCV curves}: Polynomial coefficients from
-  Mendeley degradation data {[}18{]}
-\item
-  \textbf{OCV model for voltage display}: Non-linear V(SOC) model for
-  terminal voltage; V\_nominal for SOC calculation
-\item
-  \textbf{Thermal-power feedback}: Processor throttling explains why
-  gaming battery life exceeds simple calculations
-\item
-  \textbf{BMS constraints}: 5\% shutdown threshold matches real
-  smartphone behavior
-\item
-  \textbf{Physics-based foundation}: Model is grounded in
-  electrochemical principles
-\end{enumerate}
+\item \textbf{Data-driven}: Parameters from 1,000 real device measurements (AndroWatts {[}17{]})
+\item \textbf{Validated component breakdown}: CPU 42.4\%, Display 11.8\%, Network 9.2\%
+\item \textbf{Aging-specific OCV curves}: From Mendeley degradation data {[}18{]}
+\item \textbf{Thermal throttling}: Explains realistic gaming battery life
+\item \textbf{BMS constraints}: 5\% shutdown matches real behavior
+\end{itemize}
 
 \hypertarget{limitations}{%
 \subsection{9.2 Limitations}\label{limitations}}
 
-\begin{enumerate}
-\def\labelenumi{\arabic{enumi}.}
+\begin{itemize}
 \tightlist
-\item
-  \textbf{Dataset specificity}: AndroWatts data from specific device;
-  may vary across manufacturers
-\item
-  \textbf{Measurement overhead}: Dataset measures system-level power
-  including test harness; absolute values require scaling (we use
-  relative proportions)
-\item
-  \textbf{Moderate R² values}: Brightness model (\(R^2 = 0.44\)) and
-  frequency model (\(R^2 = 0.56\)) indicate other factors influence
-  power; models capture dominant effects
-\item
-  \textbf{Simplified thermal model}: Does not fully model heat transfer
-  dynamics
-\item
-  \textbf{No transient effects}: State transition power spikes not
-  modeled
-\item
-  \textbf{Single battery type}: Optimized for Li-ion; LiPo and others
-  may differ
-\end{enumerate}
+\item Dataset specificity (single device type)
+\item Moderate R² values (brightness 0.44, frequency 0.56)
+\item Simplified thermal model; no transient effects
+\end{itemize}
 
-\hypertarget{model-improvements-made}{%
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
 \hypertarget{conclusions}{%
 \section{10. Conclusions}\label{conclusions}}
 
-We developed a \textbf{data-driven continuous-time mathematical model}
-for smartphone battery state of charge that successfully predicts
-battery behavior under diverse usage conditions. The model's key
-innovation is the use of \textbf{real-world measurement data}
-(AndroWatts {[}17{]}, Mendeley {[}18{]}) to derive power consumption
-relationships with quantified uncertainty.
+We developed a \textbf{data-driven continuous-time model} for smartphone battery SOC using real-world measurements (AndroWatts {[}17{]}, Mendeley {[}18{]}).
 
-\textbf{Key features:}
+\textbf{Key features}: Energy-based SOC ($V_{nominal}=3.7V$), empirical power models ($P_{display} \propto B$, $P_{CPU} \propto f^{1.45}$), aging-specific OCV curves, BMS constraints (5\% shutdown), thermal throttling.
 
-\begin{enumerate}
-\def\labelenumi{\arabic{enumi}.}
+\textbf{Key findings}:
+\begin{itemize}
 \tightlist
-\item
-  \textbf{Energy-based SOC definition}: SOC = E\_remaining/E\_total
-  using V\_nominal = 3.7V (constant)
-\item
-  \textbf{Empirical power relationships}: Component power proportions
-  derived from 1,000 real device tests
-\item
-  \textbf{Data-driven brightness-power relationship}: Linear fit with
-  \(R^2 = 0.44\); display power increases \textasciitilde3.3× from min
-  to max brightness
-\item
-  \textbf{Frequency-power law}: CPU power scales as \(f^{1.45}\)
-\item
-  \textbf{OCV model for voltage display}: V(SOC): 4.2V → 3.0V (not used
-  for SOC calculation)
-\item
-  \textbf{BMS constraints} (5\% shutdown, power limiting)
-\item
-  \textbf{Thermal throttling} for realistic gaming/heavy-use scenarios
-\item
-  \textbf{Aging-specific OCV curves} from measured degradation data
-\end{enumerate}
+\item CPU dominates (42.4\%), not display (11.8\%)
+\item Gaming drains 11× faster than idle (3670mW vs 334mW)
+\item SOH 1.0→0.7 reduces battery life by ~30\%
+\end{itemize}
 
-\textbf{Data-driven findings:}
-
-\begin{enumerate}
-\def\labelenumi{\arabic{enumi}.}
-\item
-  \textbf{CPU dominates power consumption} (42.4\% from measured data),
-  followed by Display (11.8\%) and Network (9.2\%). Thermal throttling
-  significantly extends battery life during sustained high load.
-\item
-  \textbf{Brightness-power relationship is approximately linear} at the
-  system level: \(P_{display} = 117.35B + 3018\) (mW), with significant
-  variance (\(R^2 = 0.44\)) due to content and display technology.
-\item
-  \textbf{CPU power scales with frequency} following
-  \(P_{CPU} \propto f^{1.45}\), consistent with CMOS power theory but
-  with coefficient fitted from real data.
-\item
-  \textbf{Temperature effects are moderated} by phone thermal
-  management. The dataset shows device temperatures clustering around
-  44-45°C during tests.
-\item
-  \textbf{Battery aging follows predictable patterns}: SOH decreases
-  from 1.0 (new) to 0.7 (EOL) with corresponding capacity reduction and
-  OCV curve shifts.
-\end{enumerate}
-
-The model provides a practical framework for understanding smartphone
-battery behavior and developing power management strategies.
-\textbf{Unlike models based on linear approximations}, this model uses
-empirical parameters from real device measurements, providing a more
-accurate representation of actual smartphone power consumption patterns.
+The model provides a physics-based framework using empirical parameters, offering more accurate predictions than linear approximations.
 
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
@@ -1902,88 +1168,34 @@ Consumption in a Smartphone.'' \emph{USENIX Annual Technical
 Conference}. - Note: Primary source for cellular power vs signal
 strength measurements (Table 3).
 
-{[}4{]} Pathak, A., Hu, Y. C., \& Zhang, M. (2012). ``Where is the
-energy spent inside my app?: Fine grained energy accounting on
-smartphones with Eprof.'' \emph{EuroSys Conference}.
+{[}4{]} Pathak, A., et al. (2012). ``Where is the energy spent inside my app?'' \emph{EuroSys}.
 
-{[}5{]} Rahmani, R., \& Benbouzid, M. (2018). ``Lithium-Ion Battery
-State of Charge Estimation Methodologies for Electric Vehicles.''
-\emph{IEEE Transactions on Vehicular Technology}. - Note: Used for OCV
-curve validation data (Table II, Figure 4).
+{[}5{]} Rahmani, R., \& Benbouzid, M. (2018). ``Li-Ion Battery SOC Estimation.'' \emph{IEEE Trans. Vehicular Technology}.
 
-{[}6{]} Apple Inc.~(2024). ``Maximizing Battery Life and Lifespan.''
-https://www.apple.com/batteries/maximizing-performance/ - Note: Source
-for BMS shutdown behavior, capacity fade specification (``80\% at 500
-cycles'').
+{[}6{]} Apple Inc. (2024). ``Maximizing Battery Life.'' https://www.apple.com/batteries/
 
-{[}7{]} Chen, D., et al.~(2020). ``Temperature-dependent battery
-capacity estimation using electrochemical model.'' \emph{Journal of
-Power Sources}, 453, 227860.
+{[}7{]} Chen, D., et al. (2020). ``Temperature-dependent battery capacity.'' \emph{J. Power Sources}, 453.
 
-{[}8{]} Saha, B. and Goebel, K. (2007). ``Battery Data Set'', NASA Ames
-Prognostics Data Repository.
-https://data.nasa.gov/dataset/Li-ion-Battery-Aging-Datasets - Note: Used
-for OCV parameter estimation and baseline capacity fade data; parameters
-adapted for smartphone variable-power discharge conditions.
+{[}8{]} Saha, B. \& Goebel, K. (2007). ``Battery Data Set'', NASA Ames. https://data.nasa.gov
 
-{[}9{]} Chen, M., \& Rincon-Mora, G. A. (2006). ``Accurate Electrical
-Battery Model Capable of Predicting Runtime and I-V Performance.''
-\emph{IEEE Transactions on Energy Conversion}, 21(2), 504-511. - Note:
-OCV polynomial model methodology and validation approach.
+{[}9{]} Chen, M. \& Rincon-Mora, G. (2006). ``Electrical Battery Model.'' \emph{IEEE Trans. Energy Conversion}, 21(2).
 
-{[}10{]} Samsung Electronics. (2024). ``Galaxy S24 Series
-Specifications.''
-https://www.samsung.com/global/galaxy/galaxy-s24/specs/ - Note: Battery
-capacity specifications; BMS shutdown threshold documentation.
+{[}10{]} Samsung (2024). ``Galaxy S24 Specs.'' https://www.samsung.com/galaxy-s24/specs/
 
-{[}11{]} Frumusanu, A. (2023). ``The Apple A17 Pro SoC Review.''
-\emph{AnandTech}. - Note: Sustained performance benchmark data showing
-thermal throttling characteristics (Figures 8-10).
+{[}11{]} Frumusanu, A. (2023). ``Apple A17 Pro Review.'' \emph{AnandTech}.
 
-{[}12{]} Qualcomm Technologies, Inc.~(2023). ``Snapdragon 8 Gen 3 Mobile
-Platform Product Brief.'' - Note: Thermal Design Power (TDP)
-specifications and thermal throttling thresholds.
+{[}12{]} Qualcomm (2023). ``Snapdragon 8 Gen 3 Product Brief.''
 
-{[}13{]} Birkl, C. R., Roberts, M. R., McTurk, E., Bruce, P. G., \&
-Howey, D. A. (2017). ``Degradation diagnostics for lithium ion cells.''
-\emph{Journal of Power Sources}, 341, 373-386. - Note: Independent
-capacity fade measurements used for validation (Figure 5).
+{[}13{]} Birkl, C., et al. (2017). ``Degradation diagnostics for Li-ion cells.'' \emph{J. Power Sources}, 341.
 
-{[}14{]} Zhang, Y., et al.~(2019). ``Thermal Management of Smartphones:
-A Review.'' \emph{Applied Thermal Engineering}, 159, 113847. - Note:
-Provides general smartphone thermal management methodology and typical
-thermal resistance values for smartphone enclosures (Section 3.2). While
-specific devices vary, the fundamental thermal principles remain
-applicable to modern smartphones.
+{[}14{]} Zhang, Y., et al. (2019). ``Thermal Management of Smartphones.'' \emph{Applied Thermal Engineering}, 159.
 
-{[}15{]} Apple Inc.~(2023). ``iPhone 15 Pro Max Technical
-Specifications.'' https://www.apple.com/iphone-15-pro/specs/ - Note:
-Battery capacity specification (4422 mAh).
+{[}15{]} Apple Inc. (2023). ``iPhone 15 Pro Max Specs.'' https://www.apple.com/iphone-15-pro/specs/
 
-{[}16{]} 3GPP TS 36.101. (2023). ``Evolved Universal Terrestrial Radio
-Access (E-UTRA); User Equipment (UE) radio transmission and reception.''
-- Note: LTE transmit power specifications used for cellular power
-modeling.
+{[}16{]} 3GPP TS 36.101. (2023). ``E-UTRA UE radio transmission and reception.''
 
-{[}17{]} AndroWatts Dataset. (2024). ``Mobile Device Component Power
-Consumption Dataset.'' Zenodo. https://zenodo.org/records/14314943 -
-DOI: 10.5281/zenodo.14314943; License: CC BY 4.0 - Note: Primary source
-for component-level power consumption data. Contains 1,000 mobile device
-stimulus tests with aggregated power metrics including per-component
-power (CPU, GPU, Display, Network), device state (brightness, CPU/GPU
-frequency, WiFi data, temperature, SOC), and fine-grained energy
-measurements from perfetto traces. - \textbf{Used for}: Data-driven
-screen power model (brightness-power relationship), CPU power-frequency
-model, component power breakdown analysis.
+{[}17{]} AndroWatts Dataset. (2024). Zenodo. DOI: 10.5281/zenodo.14314943 - Primary source for component power (1,000 device tests).
 
-{[}18{]} Mendeley Battery Degradation Dataset. (2024). ``Battery
-Degradation Datasets (Two Types of Lithium-ion Batteries).'' Mendeley
-Data. https://data.mendeley.com/datasets/v8k6bsr6tf/1 - DOI:
-10.17632/v8k6bsr6tf.1; License: CC BY 4.0 - Note: Contains lithium-ion
-battery cycling data with capacity measurements at different voltage
-points, enabling extraction of SOH and OCV(SOC) relationships across
-battery aging states. - \textbf{Used for}: Battery aging state
-parameters (SOH vs cycle count), OCV(SOC) polynomial coefficients for
-different aging levels (new, slight, moderate, aged, old, EOL).
+{[}18{]} Mendeley Battery Degradation Dataset. (2024). DOI: 10.17632/v8k6bsr6tf.1 - Battery aging parameters and OCV coefficients.
 
 \end{document}

@@ -4,62 +4,43 @@
 \contentsline {section}{1. Introduction}{3}{section*.5}%
 \contentsline {section}{2. Problem Restatement and Analysis}{3}{section*.6}%
 \contentsline {subsection}{2.1 Dataset Usage Strategy}{4}{section*.7}%
-\contentsline {subsubsection}{AndroWatts + Mendeley Combined Dataset (Primary for R1, R2, R4)}{4}{section*.8}%
-\contentsline {subsubsection}{NASA Battery Data Set (Secondary, for R3 validation)}{4}{section*.9}%
-\contentsline {subsubsection}{Dataset Assignment to Requirements}{4}{section*.10}%
-\contentsline {subsection}{2.2 Model Requirements}{5}{section*.11}%
-\contentsline {section}{3. Assumptions and Justifications}{6}{section*.12}%
-\contentsline {subsection}{3.1 Assumption Derivations}{6}{section*.13}%
-\contentsline {section}{4. Model Development}{7}{section*.14}%
-\contentsline {subsection}{4.1 Battery Fundamentals}{7}{section*.15}%
-\contentsline {subsection}{4.2 Open-Circuit Voltage (OCV) Model}{9}{section*.16}%
-\contentsline {subsection}{4.3 Power Consumption Model (Data-Driven)}{9}{section*.17}%
-\contentsline {subsubsection}{Screen Power Model (Data-Driven):}{10}{section*.18}%
-\contentsline {subsubsection}{Processor Power with Thermal Throttling:}{11}{section*.19}%
-\contentsline {subsubsection}{Component Power Breakdown (From AndroWatts Analysis):}{12}{section*.20}%
-\contentsline {subsubsection}{Signal-Strength Dependent Cellular Power:}{13}{section*.21}%
-\contentsline {subsection}{4.4 Temperature Effects with Thermal Management}{13}{section*.22}%
-\contentsline {subsection}{4.5 Battery Aging Model (Data-Driven)}{13}{section*.23}%
-\contentsline {subsubsection}{Aging State Parameters (from Actual Analysis):}{13}{section*.24}%
-\contentsline {subsubsection}{Battery Life vs Aging Analysis (using ALL 36,000 rows)}{14}{section*.25}%
-\contentsline {subsection}{4.6 Complete Governing Equations}{16}{section*.26}%
-\contentsline {section}{5. Model Implementation and Validation}{16}{section*.27}%
-\contentsline {subsection}{5.1 Numerical Implementation}{16}{section*.28}%
-\contentsline {subsection}{5.2 Primary Data Source: AndroWatts Dataset Analysis}{17}{section*.29}%
-\contentsline {subsubsection}{Combined Dataset Structure}{17}{section*.30}%
-\contentsline {subsubsection}{Power Model Parameters (from AndroWatts)}{17}{section*.31}%
-\contentsline {subsubsection}{Time-to-Empty Validation (from 36,000 samples)}{17}{section*.32}%
-\contentsline {subsection}{5.3 Secondary Data Source: NASA Battery Data Set}{18}{section*.33}%
-\contentsline {subsubsection}{NASA Dataset Observations}{18}{section*.34}%
-\contentsline {subsubsection}{Why NASA Data Cannot Be Used Directly for R1/R2}{18}{section*.35}%
-\contentsline {subsubsection}{Adapted Parameters for Smartphone Model}{18}{section*.36}%
-\contentsline {subsection}{5.4 Model Validation Summary}{19}{section*.37}%
-\contentsline {subsection}{5.5 Updated Parameter Table}{20}{section*.38}%
-\contentsline {section}{6. Time-to-Empty Predictions}{20}{section*.39}%
-\contentsline {subsection}{6.1 Usage Scenarios}{20}{section*.40}%
-\contentsline {subsection}{6.2 Discharge Curves}{21}{section*.41}%
-\contentsline {subsubsection}{Why Discharge Curves Are Linear}{22}{section*.42}%
-\contentsline {subsubsection}{Model Scope and Applicability}{22}{section*.43}%
-\contentsline {subsubsection}{Why Users Perceive Battery Drain as ``Unpredictable''}{22}{section*.44}%
-\contentsline {subsubsection}{Model's Explanatory Value}{24}{section*.45}%
-\contentsline {subsection}{6.3 Drivers of Rapid Battery Drain (from AndroWatts Analysis)}{24}{section*.46}%
-\contentsline {subsection}{6.4 Comparison: Which Activities Drain Fastest?}{25}{section*.47}%
-\contentsline {section}{7. Sensitivity Analysis}{26}{section*.48}%
-\contentsline {subsection}{7.1 Parameter Sensitivity (from run\_mcm\_analysis.py)}{26}{section*.49}%
-\contentsline {subsubsection}{Brightness Sensitivity (using AndroWatts brightness-power model)}{26}{section*.50}%
-\contentsline {subsubsection}{CPU Load Sensitivity (using AndroWatts exponent=1.45)}{26}{section*.51}%
-\contentsline {subsection}{7.2 Temperature Sensitivity (from run\_mcm\_analysis.py)}{27}{section*.52}%
-\contentsline {subsection}{7.3 Battery Aging Sensitivity (Model vs Dataset Validation)}{27}{section*.53}%
-\contentsline {subsection}{7.4 Model Assumption Sensitivity}{29}{section*.54}%
-\contentsline {section}{8. Practical Recommendations}{29}{section*.55}%
-\contentsline {subsection}{8.1 For Smartphone Users (Based on AndroWatts Component Analysis)}{29}{section*.56}%
-\contentsline {subsubsection}{High Impact (\textgreater {} 10\% improvement)}{29}{section*.57}%
-\contentsline {subsubsection}{Medium Impact}{30}{section*.58}%
-\contentsline {subsubsection}{Combined Strategy (from \texttt {run\_mcm\_analysis.py}):}{30}{section*.59}%
-\contentsline {subsection}{8.2 For Operating System Developers (Informed by AndroWatts Data)}{30}{section*.60}%
-\contentsline {subsection}{8.3 For Battery Longevity (From Model + Mendeley Aging Data)}{30}{section*.61}%
-\contentsline {section}{9. Strengths and Limitations}{31}{section*.62}%
-\contentsline {subsection}{9.1 Strengths}{31}{section*.63}%
-\contentsline {subsection}{9.2 Limitations}{31}{section*.64}%
-\contentsline {section}{10. Conclusions}{32}{section*.65}%
-\contentsline {section}{References}{33}{section*.66}%
+\contentsline {subsection}{2.2 Model Requirements}{4}{section*.8}%
+\contentsline {section}{3. Assumptions and Justifications}{5}{section*.9}%
+\contentsline {subsection}{3.1 Assumption Derivations}{6}{section*.10}%
+\contentsline {section}{4. Model Development}{6}{section*.11}%
+\contentsline {subsection}{4.1 Battery Fundamentals}{6}{section*.12}%
+\contentsline {subsection}{4.2 Open-Circuit Voltage (OCV) Model}{8}{section*.13}%
+\contentsline {subsection}{4.3 Power Consumption Model (Data-Driven)}{8}{section*.14}%
+\contentsline {subsubsection}{Screen Power Model (Data-Driven):}{9}{section*.15}%
+\contentsline {subsubsection}{Processor Power with Thermal Throttling:}{10}{section*.16}%
+\contentsline {subsubsection}{Component Power Breakdown (From AndroWatts Analysis):}{11}{section*.17}%
+\contentsline {subsubsection}{Signal-Strength Dependent Cellular Power:}{12}{section*.18}%
+\contentsline {subsection}{4.4 Temperature Effects with Thermal Management}{12}{section*.19}%
+\contentsline {subsection}{4.5 Battery Aging Model (Data-Driven)}{12}{section*.20}%
+\contentsline {subsubsection}{Aging State Parameters (from Actual Analysis):}{13}{section*.21}%
+\contentsline {subsubsection}{Battery Life vs Aging Analysis (using ALL 36,000 rows)}{13}{section*.22}%
+\contentsline {subsection}{4.6 Complete Governing Equations}{15}{section*.23}%
+\contentsline {section}{5. Model Implementation and Validation}{15}{section*.24}%
+\contentsline {subsection}{5.1 Numerical Implementation}{15}{section*.25}%
+\contentsline {subsection}{5.2 AndroWatts Dataset Analysis}{15}{section*.26}%
+\contentsline {subsection}{5.3 Model Validation Summary}{16}{section*.27}%
+\contentsline {section}{6. Time-to-Empty Predictions}{16}{section*.28}%
+\contentsline {subsection}{6.1 Usage Scenarios}{16}{section*.29}%
+\contentsline {subsection}{6.2 Discharge Curves}{17}{section*.30}%
+\contentsline {subsubsection}{Why Discharge Curves Are Linear}{17}{section*.31}%
+\contentsline {subsection}{6.3 Drivers of Rapid Battery Drain (from AndroWatts Analysis)}{18}{section*.32}%
+\contentsline {subsection}{6.4 Comparison: Which Activities Drain Fastest?}{18}{section*.33}%
+\contentsline {section}{7. Sensitivity Analysis}{19}{section*.34}%
+\contentsline {subsection}{7.1 Parameter Sensitivity}{19}{section*.35}%
+\contentsline {subsection}{7.2 Temperature Sensitivity}{19}{section*.36}%
+\contentsline {subsection}{7.3 Aging Sensitivity}{19}{section*.37}%
+\contentsline {subsection}{7.4 Assumption Sensitivity}{19}{section*.38}%
+\contentsline {section}{8. Practical Recommendations}{22}{section*.39}%
+\contentsline {subsection}{8.1 For Smartphone Users}{22}{section*.40}%
+\contentsline {subsection}{8.2 For OS Developers}{22}{section*.41}%
+\contentsline {subsection}{8.3 For Battery Longevity}{22}{section*.42}%
+\contentsline {section}{9. Strengths and Limitations}{22}{section*.43}%
+\contentsline {subsection}{9.1 Strengths}{22}{section*.44}%
+\contentsline {subsection}{9.2 Limitations}{23}{section*.45}%
+\contentsline {section}{10. Conclusions}{23}{section*.46}%
+\contentsline {section}{References}{23}{section*.47}%
