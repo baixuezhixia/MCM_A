@@ -510,19 +510,34 @@ class ZenodoDataAnalyzer:
     
     def _plot_component_breakdown(self, output_dir: str):
         """Plot component power breakdown"""
+        # Match the table in documentation: 7 categories with "Other" = 21.2%
         fig, axes = plt.subplots(1, 2, figsize=(14, 6))
         
         # Pie chart
         ax1 = axes[0]
-        labels = list(self.results.component_percentages.keys())
-        sizes = [self.results.component_percentages[l] for l in labels]
         
-        # Add "Other" category for missing percentage to ensure total = 100%
-        total_pct = sum(sizes)
-        if total_pct < 100 - 0.01:  # Use tolerance for floating point comparison
-            other_pct = 100 - total_pct
-            labels.append('Other')
-            sizes.append(other_pct)
+        # Define major components to show individually (matches table in documentation)
+        major_components = ['CPU (Big+Mid+Little)', 'Display', 'WLAN/BT', 'GPU', 'Infrastructure', 'GPU3D']
+        
+        labels = []
+        sizes = []
+        other_pct = 0.0
+        
+        for comp, pct in self.results.component_percentages.items():
+            if comp in major_components:
+                labels.append(comp)
+                sizes.append(pct)
+            else:
+                # Group smaller components (UFS, Camera, Memory, Sensor, Cellular, GPS) into "Other"
+                other_pct += pct
+        
+        # Add remaining untracked percentage to "Other" to ensure total = 100%
+        total_tracked = sum(sizes) + other_pct
+        if total_tracked < 100 - 0.01:
+            other_pct += 100 - total_tracked
+        
+        labels.append('Other')
+        sizes.append(other_pct)
         
         # Sort by size
         sorted_data = sorted(zip(labels, sizes), key=lambda x: -x[1])
@@ -541,13 +556,12 @@ class ZenodoDataAnalyzer:
         def autopct_func(pct):
             return f'{pct:.1f}%' if pct >= min_label_pct else ''
         
-        # Custom label function: only show label if percentage >= threshold
-        display_labels = [l if s >= min_label_pct else '' for l, s in zip(labels, sizes)]
-        
         wedges, texts, autotexts = ax1.pie(
-            sizes, labels=display_labels, autopct=autopct_func, startangle=90,
+            sizes, labels=None, autopct=autopct_func, startangle=90,
             colors=colors, explode=explode, pctdistance=0.75
         )
+        ax1.legend(wedges, labels, title="Components", loc="center left", 
+                  bbox_to_anchor=(-0.3, 0.5))
         ax1.set_title('Component Power Breakdown (% of Total)')
         
         # Bar chart
