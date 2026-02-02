@@ -714,19 +714,50 @@ def generate_figures(model: ZenodoBasedSOCModel, r2_results: dict,
     print(f"Saved: {FIGURES_DIR}/mcm_sensitivity_analysis.png")
     
     # Figure 3: Component breakdown pie chart
+    # Match the table in documentation: 7 categories with "Other" ≈ 21.2%
+    # (UFS, Camera, Memory, Sensor, Cellular, GPS + untracked power grouped into "Other")
     fig, ax = plt.subplots(figsize=(10, 8))
     
     components = zenodo_params.get('component_breakdown', {}).get('percentages', {})
-    labels = list(components.keys())
-    sizes = list(components.values())
+    
+    # Define major components to show individually (matches table in documentation)
+    major_components = ['CPU (Big+Mid+Little)', 'Display', 'WLAN/BT', 'GPU', 'Infrastructure', 'GPU3D']
+    
+    labels = []
+    sizes = []
+    other_pct = 0.0
+    
+    for comp, pct in components.items():
+        if comp in major_components:
+            labels.append(comp)
+            sizes.append(pct)
+        else:
+            # Group smaller components (UFS, Camera, Memory, Sensor, Cellular, GPS) into "Other"
+            other_pct += pct
+    
+    # Add remaining untracked percentage to "Other" to ensure total = 100%
+    total_tracked = sum(sizes) + other_pct
+    if total_tracked < 100 - 0.01:
+        other_pct += 100 - total_tracked
+    
+    labels.append('Other')
+    sizes.append(other_pct)
     
     # Sort by size for better visualization
     sorted_pairs = sorted(zip(sizes, labels), reverse=True)
     sizes, labels = zip(*sorted_pairs)
+    sizes = list(sizes)
+    labels = list(labels)
     
     colors = plt.cm.Set3(np.linspace(0, 1, len(labels)))
     
-    wedges, texts, autotexts = ax.pie(sizes, labels=None, autopct='%1.1f%%',
+    # Custom autopct function: only show label if percentage >= threshold to avoid overlapping
+    min_label_pct = 3  # Minimum percentage to display label on pie slice
+    def autopct_func(pct):
+        return f'{pct:.1f}%' if pct >= min_label_pct else ''
+    
+    # With "Other" added, total is now 100%, so pie chart displays correct percentages
+    wedges, texts, autotexts = ax.pie(sizes, labels=None, autopct=autopct_func,
                                        colors=colors, pctdistance=0.75)
     
     ax.legend(wedges, labels, title="Components", loc="center left", 

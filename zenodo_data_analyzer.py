@@ -510,16 +510,40 @@ class ZenodoDataAnalyzer:
     
     def _plot_component_breakdown(self, output_dir: str):
         """Plot component power breakdown"""
+        # Match the table in documentation: 7 categories with "Other" = 21.2%
         fig, axes = plt.subplots(1, 2, figsize=(14, 6))
         
         # Pie chart
         ax1 = axes[0]
-        labels = list(self.results.component_percentages.keys())
-        sizes = [self.results.component_percentages[l] for l in labels]
+        
+        # Define major components to show individually (matches table in documentation)
+        major_components = ['CPU (Big+Mid+Little)', 'Display', 'WLAN/BT', 'GPU', 'Infrastructure', 'GPU3D']
+        
+        labels = []
+        sizes = []
+        other_pct = 0.0
+        
+        for comp, pct in self.results.component_percentages.items():
+            if comp in major_components:
+                labels.append(comp)
+                sizes.append(pct)
+            else:
+                # Group smaller components (UFS, Camera, Memory, Sensor, Cellular, GPS) into "Other"
+                other_pct += pct
+        
+        # Add remaining untracked percentage to "Other" to ensure total = 100%
+        total_tracked = sum(sizes) + other_pct
+        if total_tracked < 100 - 0.01:
+            other_pct += 100 - total_tracked
+        
+        labels.append('Other')
+        sizes.append(other_pct)
         
         # Sort by size
         sorted_data = sorted(zip(labels, sizes), key=lambda x: -x[1])
         labels, sizes = zip(*sorted_data)
+        labels = list(labels)
+        sizes = list(sizes)
         
         # Colors
         colors = plt.cm.Set3(np.linspace(0, 1, len(labels)))
@@ -527,10 +551,17 @@ class ZenodoDataAnalyzer:
         # Explode the largest slice
         explode = [0.05 if i == 0 else 0 for i in range(len(labels))]
         
+        # Custom autopct function: only show label if percentage >= threshold to avoid overlapping
+        min_label_pct = 3  # Minimum percentage to display label on pie slice
+        def autopct_func(pct):
+            return f'{pct:.1f}%' if pct >= min_label_pct else ''
+        
         wedges, texts, autotexts = ax1.pie(
-            sizes, labels=labels, autopct='%1.1f%%', startangle=90,
+            sizes, labels=None, autopct=autopct_func, startangle=90,
             colors=colors, explode=explode, pctdistance=0.75
         )
+        ax1.legend(wedges, labels, title="Components", loc="center left", 
+                  bbox_to_anchor=(-0.3, 0.5))
         ax1.set_title('Component Power Breakdown (% of Total)')
         
         # Bar chart
