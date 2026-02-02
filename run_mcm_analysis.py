@@ -720,12 +720,22 @@ def generate_figures(model: ZenodoBasedSOCModel, r2_results: dict,
     labels = list(components.keys())
     sizes = list(components.values())
     
+    # Add "Other" category for missing percentage to ensure total = 100%
+    total_pct = sum(sizes)
+    if total_pct < 100 - 0.01:  # Use tolerance for floating point comparison
+        other_pct = 100 - total_pct
+        labels.append('Other')
+        sizes.append(other_pct)
+    
     # Sort by size for better visualization
     sorted_pairs = sorted(zip(sizes, labels), reverse=True)
     sizes, labels = zip(*sorted_pairs)
+    sizes = list(sizes)
+    labels = list(labels)
     
     colors = plt.cm.Set3(np.linspace(0, 1, len(labels)))
     
+    # With "Other" added, total is now 100%, so pie chart displays correct percentages
     wedges, texts, autotexts = ax.pie(sizes, labels=None, autopct='%1.1f%%',
                                        colors=colors, pctdistance=0.75)
     
