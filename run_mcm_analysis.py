@@ -726,7 +726,13 @@ def generate_figures(model: ZenodoBasedSOCModel, r2_results: dict,
     
     colors = plt.cm.Set3(np.linspace(0, 1, len(labels)))
     
-    wedges, texts, autotexts = ax.pie(sizes, labels=None, autopct='%1.1f%%',
+    # Custom autopct function to hide labels for small slices (< 3%) to prevent overlap
+    def make_autopct(values):
+        def autopct(pct):
+            return f'{pct:.1f}%' if pct >= 3 else ''
+        return autopct
+    
+    wedges, texts, autotexts = ax.pie(sizes, labels=None, autopct=make_autopct(sizes),
                                        colors=colors, pctdistance=0.75)
     
     ax.legend(wedges, labels, title="Components", loc="center left", 
