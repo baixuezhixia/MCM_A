@@ -714,18 +714,34 @@ def generate_figures(model: ZenodoBasedSOCModel, r2_results: dict,
     print(f"Saved: {FIGURES_DIR}/mcm_sensitivity_analysis.png")
     
     # Figure 3: Component breakdown pie chart
+    # Match the table in documentation: 7 categories with "Other" ≈ 21.2%
+    # (UFS, Camera, Memory, Sensor, Cellular, GPS + untracked power grouped into "Other")
     fig, ax = plt.subplots(figsize=(10, 8))
     
     components = zenodo_params.get('component_breakdown', {}).get('percentages', {})
-    labels = list(components.keys())
-    sizes = list(components.values())
     
-    # Add "Other" category for missing percentage to ensure total = 100%
-    total_pct = sum(sizes)
-    if total_pct < 100 - 0.01:  # Use tolerance for floating point comparison
-        other_pct = 100 - total_pct
-        labels.append('Other')
-        sizes.append(other_pct)
+    # Define major components to show individually (matches table in documentation)
+    major_components = ['CPU (Big+Mid+Little)', 'Display', 'WLAN/BT', 'GPU', 'Infrastructure', 'GPU3D']
+    
+    labels = []
+    sizes = []
+    other_pct = 0.0
+    
+    for comp, pct in components.items():
+        if comp in major_components:
+            labels.append(comp)
+            sizes.append(pct)
+        else:
+            # Group smaller components (UFS, Camera, Memory, Sensor, Cellular, GPS) into "Other"
+            other_pct += pct
+    
+    # Add remaining untracked percentage to "Other" to ensure total = 100%
+    total_tracked = sum(sizes) + other_pct
+    if total_tracked < 100 - 0.01:
+        other_pct += 100 - total_tracked
+    
+    labels.append('Other')
+    sizes.append(other_pct)
     
     # Sort by size for better visualization
     sorted_pairs = sorted(zip(sizes, labels), reverse=True)
