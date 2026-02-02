@@ -1,0 +1,422 @@
+% =============================================================================
+% 论文附录：核心代码片段
+% Paper Appendix: Core Code Snippets
+% MCM 2026 Problem A - Smartphone Battery SOC Continuous-Time Modeling
+% =============================================================================
+
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{ctex}  % 支持中文
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{geometry}
+\usepackage{amsmath}
+\usepackage{hyperref}
+
+\geometry{margin=1in}
+
+% Python代码样式设置
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{pythonstyle}{
+    backgroundcolor=\color{backcolour},
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{blue},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=left,
+    numbersep=5pt,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=4,
+    language=Python
+}
+
+\lstset{style=pythonstyle}
+
+\title{\textbf{Appendix: Core Code Snippets}\\
+\large MCM 2026 Problem A - Smartphone Battery SOC Model}
+\author{}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+本附录包含MCM 2026问题A（智能手机电池SOC连续时间建模）的核心代码片段。
+
+This appendix contains the core code snippets for MCM 2026 Problem A (Smartphone Battery State-of-Charge Continuous-Time Modeling).
+
+% =============================================================================
+\section{核心微分方程模型 (Core ODE Model)}
+% =============================================================================
+
+\subsection{SOC微分方程}
+
+核心方程 (Core Equation):
+\begin{equation}
+\frac{dSOC(t)}{dt} = -\frac{P_{total}(t)}{E_{total}}
+\end{equation}
+
+其中 $SOC = E_{remaining} / E_{total}$ 表示能量比值。
+
+\begin{lstlisting}
+def dSOC_dt(self, t: float, SOC: float, usage_func=None) -> float:
+    """
+    Core differential equation (energy-based):
+    dSOC(t)/dt = -P_total(t) / E_total
+    
+    SOC Definition: SOC = E_remaining / E_total
+    
+    Parameters:
+        t : Time in hours
+        SOC : State of charge (0 to 1)
+        usage_func : Returns UsageState for given time t
+    
+    Returns:
+        Rate of change of SOC (per hour)
+    """
+    usage = usage_func(t) if usage_func else UsageState()
+    
+    # Total power in Watts
+    P_total_W = self.calculate_P_total(usage) / 1000.0
+    
+    # Effective energy capacity (Wh): E = V_nominal * Q
+    C_eff_Wh = self.get_effective_capacity_Wh(usage.temperature_C)
+    
+    # Core equation: dSOC/dt = -P_total / E_total
+    return -P_total_W / C_eff_Wh
+\end{lstlisting}
+
+\subsection{ODE数值求解}
+
+\begin{lstlisting}
+def simulate(self, t_span, SOC_initial=1.0, usage_func=None):
+    """
+    Solve the ODE to simulate battery discharge.
+    
+    Parameters:
+        t_span : (t_start, t_end) in hours
+        SOC_initial : Initial SOC (0 to 1)
+        usage_func : Time-varying usage function
+    """
+    def ode(t, y):
+        return [self.dSOC_dt(t, y[0], usage_func)]
+    
+    # Terminal event: shutdown at 5% SOC
+    def shutdown(t, y):
+        return y[0] - 0.05
+    shutdown.terminal = True
+    shutdown.direction = -1
+    
+    sol = solve_ivp(ode, t_span, [SOC_initial], 
+                    events=shutdown, dense_output=True)
+    return sol.t, sol.y[0]
+\end{lstlisting}
+
+% =============================================================================
+\section{功耗模型 (Power Consumption Model)}
+% =============================================================================
+
+总功耗公式 (Total Power Equation):
+\begin{equation}
+P_{total} = P_{base} + P_{screen} + P_{cpu} + P_{network} + P_{GPS} + P_{other}
+\end{equation}
+
+\subsection{总功耗计算}
+
+\begin{lstlisting}
+def calculate_P_total(self, usage: UsageState) -> float:
+    """
+    Total power: P_total = P_base + P_screen + P_cpu + P_network + P_GPS + P_other
+    Returns power in mW.
+    """
+    P_total = self.power.P_base_mW  # Base power: ~80 mW
+    P_total += self.calculate_P_screen(usage)
+    P_total += self.calculate_P_cpu(usage)
+    P_total += self.calculate_P_network(usage)
+    
+    if usage.gps_active:
+        P_total += self.power.P_gps_mW  # ~350 mW
+    if usage.bluetooth_active:
+        P_total += self.power.P_bluetooth_mW  # ~15 mW
+        
+    return P_total
+\end{lstlisting}
+
+\subsection{屏幕功耗模型}
+
+屏幕功耗公式 (Screen Power Equation):
+\begin{equation}
+P_{screen} = k_{screen} \times A \times B(t)^n
+\end{equation}
+
+基于 Carroll \& Heiser (2010) 的测量数据：74-412 mW。
+
+\begin{lstlisting}
+def calculate_P_screen(self, usage: UsageState) -> float:
+    """
+    Screen power model: P_screen = k_screen * A * B(t)^n
+    Based on Carroll & Heiser (2010): 74-412 mW range
+    """
+    if not usage.screen_on:
+        return 0.0
+    
+    P_min, P_max = 74, 412  # mW
+    B_norm = max(0.01, usage.brightness)
+    brightness_factor = B_norm ** 2.0  # Brightness exponent n=2
+    
+    return P_min + (P_max - P_min) * brightness_factor
+\end{lstlisting}
+
+\subsection{CPU功耗模型}
+
+CPU功耗公式 (CPU Power Equation):
+\begin{equation}
+P_{cpu} = P_{static} + k_{cpu} \times U^m \times f^p
+\end{equation}
+
+其中 $m=1.5$, $p=2.8$ (CMOS动态功耗特性)，基于 Zhang et al. (2010)。
+
+\begin{lstlisting}
+def calculate_P_cpu(self, usage: UsageState) -> float:
+    """
+    CPU power model: P_cpu = P_static + k_cpu * U^m * f^p
+    Based on Zhang et al. (2010): CMOS dynamic power scaling
+    """
+    U = usage.cpu_utilization        # 0 to 1
+    f_norm = usage.cpu_frequency_normalized  # 0 to 1
+    
+    # P_dynamic ~ U^m * f^p (m=1.5, p=2.8 for CMOS)
+    P_dynamic = 0.8 * (U ** 1.5) * (f_norm ** 2.8) * 4000
+    
+    return 50 + P_dynamic  # P_static = 50 mW
+\end{lstlisting}
+
+\subsection{网络功耗模型}
+
+网络功耗公式 (Network Power Equation):
+\begin{equation}
+P_{network} = P_{idle}(Mode) + k_{tx} \times R_{tx} + k_{rx} \times R_{rx}
+\end{equation}
+
+基于 Pathak et al. (2012)。
+
+\begin{lstlisting}
+def calculate_P_network(self, usage: UsageState) -> float:
+    """
+    Network power: P_network = P_idle(Mode) + k_tx*R_tx + k_rx*R_rx
+    Based on Pathak et al. (2012)
+    """
+    P = 0.0
+    if usage.wifi_active:
+        P += 25 + 0.1*usage.data_rate_tx_kbps + 0.05*usage.data_rate_rx_kbps
+    if usage.cellular_active:
+        P += 80 + 0.15*usage.data_rate_tx_kbps + 0.08*usage.data_rate_rx_kbps
+    return P
+\end{lstlisting}
+
+% =============================================================================
+\section{电池老化模型 (Battery Aging Model)}
+% =============================================================================
+
+\subsection{有效容量计算}
+
+有效能量容量公式 (Effective Energy Capacity):
+\begin{equation}
+E_{eff} = E_{nominal} \times f_{temp}(T) \times f_{age}(n)
+\end{equation}
+
+\begin{lstlisting}
+def get_effective_capacity_Wh(self, temperature: float, cycles: int) -> float:
+    """
+    Effective energy capacity considering temperature and aging:
+    E_eff = E_nominal * f_temp(T) * f_age(n)
+    """
+    # Temperature factor (interpolated from industry data)
+    temp_factor = self._get_temp_factor(temperature)
+    
+    # Aging factor (exponential model from NASA data)
+    alpha = 0.0012  # Capacity fade coefficient
+    age_factor = max(0.7, np.exp(-alpha * cycles))
+    
+    # E_nominal = V_nominal * Q_nominal
+    E_nominal = 3.85 * 4.5  # V * Ah = Wh
+    return E_nominal * temp_factor * age_factor
+\end{lstlisting}
+
+\subsection{容量衰减模型（基于NASA数据拟合）}
+
+线性容量衰减模型 (Linear Capacity Fade Model):
+\begin{equation}
+C(n) = C_0 \times (1 - \gamma \times n)
+\end{equation}
+
+其中 $\gamma \approx 0.0008$ (每循环衰减0.08\%)。
+
+\begin{lstlisting}
+def estimate_capacity_fade_rate(self):
+    """
+    Fit linear capacity fade model to NASA battery data:
+    C(n) = C0 * (1 - gamma * n)
+    
+    Returns mean fade rate gamma ~ 0.0008 (0.08% per cycle)
+    """
+    fade_rates = []
+    for battery_id, data in self.battery_data.items():
+        if data.n_cycles >= 50:
+            def capacity_model(n, C0, gamma):
+                return C0 * (1 - gamma * n)
+            
+            popt, _ = curve_fit(capacity_model, 
+                               data.cycle_numbers, 
+                               data.capacities,
+                               p0=[data.initial_capacity, 0.002])
+            fade_rates.append(popt[1])  # gamma
+    
+    return np.mean(fade_rates)
+\end{lstlisting}
+
+% =============================================================================
+\section{开路电压模型 (Open Circuit Voltage Model)}
+% =============================================================================
+
+\subsection{OCV多项式模型（基于Zenodo数据）}
+
+五阶多项式OCV模型 (5th-order Polynomial OCV Model):
+\begin{equation}
+V(SOC) = c_0 + c_1 \cdot SOC + c_2 \cdot SOC^2 + c_3 \cdot SOC^3 + c_4 \cdot SOC^4 + c_5 \cdot SOC^5
+\end{equation}
+
+\begin{lstlisting}
+def get_ocv(self, soc: float) -> float:
+    """
+    Open Circuit Voltage using Zenodo polynomial coefficients:
+    V(SOC) = c0 + c1*SOC + c2*SOC^2 + c3*SOC^3 + c4*SOC^4 + c5*SOC^5
+    """
+    soc = np.clip(soc, 0.001, 1)
+    
+    # Zenodo-fitted coefficients
+    c = [3.349, 2.441, -9.555, 20.922, -20.325, 7.381]
+    
+    V = sum(c[i] * soc**i for i in range(6))
+    return max(3.0, V)  # V_min = 3.0V
+\end{lstlisting}
+
+% =============================================================================
+\section{使用场景预测 (Usage Scenario Predictions)}
+% =============================================================================
+
+\subsection{电池续航预测}
+
+\begin{lstlisting}
+def predict_time_to_empty(self, power_mw, initial_soc=1.0, 
+                          soh=1.0, temperature=25.0):
+    """Predict time to reach shutdown SOC (5%)"""
+    def ode(t, y):
+        if y[0] <= 0.05:
+            return [0.0]
+        E_wh = 3.7 * 4.5 * soh  # Energy capacity
+        return [-power_mw/1000 / E_wh]
+    
+    def shutdown(t, y):
+        return y[0] - 0.05
+    shutdown.terminal = True
+    shutdown.direction = -1
+    
+    sol = solve_ivp(ode, [0, 100], [initial_soc], events=shutdown)
+    return sol.t[-1]
+
+# Example usage scenarios
+scenarios = {
+    'idle':     {'brightness': 0.0, 'cpu_load': 0.05},  # ~50h
+    'light':    {'brightness': 0.3, 'cpu_load': 0.15},  # ~25h
+    'moderate': {'brightness': 0.5, 'cpu_load': 0.35},  # ~15h
+    'heavy':    {'brightness': 0.7, 'cpu_load': 0.55},  # ~8h
+    'gaming':   {'brightness': 0.9, 'cpu_load': 0.85},  # ~4h
+}
+\end{lstlisting}
+
+% =============================================================================
+\section{敏感性分析 (Sensitivity Analysis)}
+% =============================================================================
+
+\begin{lstlisting}
+def sensitivity_analysis(model, base_params):
+    """
+    Analyze sensitivity of battery life to each parameter
+    """
+    results = {}
+    base_tte = model.predict_time_to_empty(base_params)
+    
+    # Brightness sensitivity
+    for b in [0.1, 0.3, 0.5, 0.7, 0.9]:
+        tte = model.predict(brightness=b)
+        results[f'brightness_{b}'] = (tte - base_tte) / base_tte
+    
+    # CPU load sensitivity
+    for cpu in [0.1, 0.3, 0.5, 0.7, 0.9]:
+        tte = model.predict(cpu_load=cpu)
+        results[f'cpu_{cpu}'] = (tte - base_tte) / base_tte
+    
+    # SOH (battery aging) sensitivity
+    for soh in [1.0, 0.9, 0.8, 0.7]:
+        tte = model.predict(soh=soh)
+        results[f'soh_{soh}'] = (tte - base_tte) / base_tte
+    
+    return results
+\end{lstlisting}
+
+% =============================================================================
+\section{数据来源说明 (Data Sources)}
+% =============================================================================
+
+\begin{table}[h]
+\centering
+\caption{数据来源 (Data Sources)}
+\begin{tabular}{lll}
+\toprule
+\textbf{数据集} & \textbf{来源} & \textbf{用途} \\
+\midrule
+NASA Battery & NASA Ames Prognostics Repository & 容量衰减参数估计 \\
+Zenodo AndroWatts & Zenodo.org/records/14314943 & 功耗分解与亮度-功耗关系 \\
+Carroll \& Heiser (2010) & USENIX ATC & 屏幕/CPU基准功耗 \\
+Pathak et al. (2012) & EuroSys & 网络功耗模型 \\
+Zhang et al. (2010) & CODES+ISSS & CPU功耗公式 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% =============================================================================
+\section{模型参数汇总 (Model Parameters Summary)}
+% =============================================================================
+
+\begin{table}[h]
+\centering
+\caption{模型参数 (Model Parameters)}
+\begin{tabular}{llll}
+\toprule
+\textbf{参数} & \textbf{符号} & \textbf{值} & \textbf{来源} \\
+\midrule
+标称容量 & $C_{nominal}$ & 4500 mAh & Modern smartphone \\
+标称电压 & $V_{nominal}$ & 3.85 V & Li-ion standard \\
+容量衰减率 & $\gamma$ & 0.0008/cycle & NASA data fitting \\
+基础功耗 & $P_{base}$ & 80 mW & Literature \\
+屏幕功耗 & $P_{screen}$ & 74-412 mW & Carroll \& Heiser \\
+CPU静态功耗 & $P_{cpu,static}$ & 50 mW & Zhang et al. \\
+关机阈值 & $SOC_{shutdown}$ & 5\% & BMS standard \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\end{document}
