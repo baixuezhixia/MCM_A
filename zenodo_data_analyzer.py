@@ -528,13 +528,11 @@ class ZenodoDataAnalyzer:
         explode = [0.05 if i == 0 else 0 for i in range(len(labels))]
         
         # Custom autopct function to hide labels for small slices (< 3%) to prevent overlap
-        def make_autopct(values):
-            def autopct(pct):
-                return f'{pct:.1f}%' if pct >= 3 else ''
-            return autopct
+        def autopct_threshold(pct):
+            return f'{pct:.1f}%' if pct >= 3 else ''
         
         wedges, texts, autotexts = ax1.pie(
-            sizes, labels=None, autopct=make_autopct(sizes), startangle=90,
+            sizes, labels=None, autopct=autopct_threshold, startangle=90,
             colors=colors, explode=explode, pctdistance=0.75
         )
         # Use legend instead of labels to avoid overlap
