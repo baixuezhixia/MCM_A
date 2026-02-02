@@ -51,6 +51,7 @@ where $E_{effective} = V_{nominal} \cdot Q_{effective}$ is the energy capacity (
 9. [Strengths and Limitations](#9-strengths-and-limitations)
 10. [Conclusions](#10-conclusions)
 11. [References](#references)
+12. [Report on Use of AI Tools](#report-on-use-of-ai-tools)
 
 ---
 
@@ -1082,6 +1083,16 @@ The model provides a practical framework for understanding smartphone battery be
    - DOI: 10.17632/v8k6bsr6tf.1; License: CC BY 4.0
    - Note: Contains lithium-ion battery cycling data with capacity measurements at different voltage points, enabling extraction of SOH and OCV(SOC) relationships across battery aging states.
    - **Used for**: Battery aging state parameters (SOH vs cycle count), OCV(SOC) polynomial coefficients for different aging levels (new, slight, moderate, aged, old, EOL).
+
+---
+
+# Report on Use of AI Tools
+
+**Baidu Fanyi, Baidu Translate (Sep 10, 2025 version)**
+Uploaded entire paper written in Mandarin to be translated into English.
+
+**OpenAI ChatGPT (Nov 5, 2023 version, ChatGPT-4)**
+Query: Used for assistance with technical writing, mathematical notation formatting, and code implementation guidance for the battery model.
 
 ---
 
