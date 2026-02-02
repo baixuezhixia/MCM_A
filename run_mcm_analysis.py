@@ -735,8 +735,13 @@ def generate_figures(model: ZenodoBasedSOCModel, r2_results: dict,
     
     colors = plt.cm.Set3(np.linspace(0, 1, len(labels)))
     
+    # Custom autopct function: only show label if percentage >= threshold to avoid overlapping
+    min_label_pct = 3  # Minimum percentage to display label on pie slice
+    def autopct_func(pct):
+        return f'{pct:.1f}%' if pct >= min_label_pct else ''
+    
     # With "Other" added, total is now 100%, so pie chart displays correct percentages
-    wedges, texts, autotexts = ax.pie(sizes, labels=None, autopct='%1.1f%%',
+    wedges, texts, autotexts = ax.pie(sizes, labels=None, autopct=autopct_func,
                                        colors=colors, pctdistance=0.75)
     
     ax.legend(wedges, labels, title="Components", loc="center left", 
